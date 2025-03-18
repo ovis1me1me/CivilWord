@@ -1,7 +1,7 @@
 # DONGA_SW_PROJECT_CivilWord
 <br>
-
-
+## local llm을 활용한 새올민원자동답변 생성기
+<br>
 팀장 양한나 2243127 / 224317@donga.ac.kr<br> 
 팀원 임지은 2243255 <br>
 팀원 배준영 2242844<br>
