@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.pyc
+
+# 가상환경
+venv/
+
+# 환경변수
+.env
+
+# DB 백업
+*.dump
+*.sql
+dump/
+
+# 시스템
+.DS_Store
+Thumbs.db
