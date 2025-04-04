@@ -47,5 +47,41 @@
 - 매주 일요일 오후 기준으로 업데이트
 
 ---
+🚀 백엔드 실행 가이드 (FastAPI)
+🧩 기본 요구사항
+Python 3.10+
 
-> 본 프로젝트는 로컬 LLM 기반으로 새올 민원 데이터를 학습하여 고품질 자동응답 시스템을 구축하는 것을 목표로 합니다.
+WSL 또는 Ubuntu 22.04
+
+Git 클론 가능한 환경
+
+📦 실행 순서
+프로젝트 클론
+
+bash
+복사
+편집
+git clone https://github.com/your-username/DONGA_SW_PROJECT_CivilWord.git
+cd DONGA_SW_PROJECT_CivilWord
+Python 가상환경 생성 및 활성화 (WSL 기준)
+
+bash
+복사
+편집
+python3 -m venv venv
+source venv/bin/activate
+의존성 설치
+
+bash
+복사
+편집
+pip install -r requirements.txt
+FastAPI 서버 실행
+
+bash
+복사
+편집
+uvicorn app.main:app --reload
+Swagger UI 접속 (브라우저에서 테스트 가능) http://127.0.0.1:8000/docs
+
+
