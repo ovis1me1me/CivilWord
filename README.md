@@ -55,33 +55,30 @@ WSL 또는 Ubuntu 22.04
 
 Git 클론 가능한 환경
 
-📦 실행 순서
-프로젝트 클론
+<h3>📦 실행 순서</h3>
 
-bash
-복사
-편집
-git clone https://github.com/your-username/DONGA_SW_PROJECT_CivilWord.git
-cd DONGA_SW_PROJECT_CivilWord
-Python 가상환경 생성 및 활성화 (WSL 기준)
+<ol>
+  <li><strong>프로젝트 클론</strong>
+    <pre><code>git clone https://github.com/your-username/DONGA_SW_PROJECT_CivilWord.git
+cd DONGA_SW_PROJECT_CivilWord</code></pre>
+  </li>
 
-bash
-복사
-편집
-python3 -m venv venv
-source venv/bin/activate
-의존성 설치
+  <li><strong>Python 가상환경 생성 및 활성화 (WSL 기준)</strong>
+    <pre><code>python3 -m venv venv
+source venv/bin/activate</code></pre>
+  </li>
 
-bash
-복사
-편집
-pip install -r requirements.txt
-FastAPI 서버 실행
+  <li><strong>의존성 설치</strong>
+    <pre><code>pip install -r requirements.txt</code></pre>
+  </li>
 
-bash
-복사
-편집
-uvicorn app.main:app --reload
-Swagger UI 접속 (브라우저에서 테스트 가능) http://127.0.0.1:8000/docs
+  <li><strong>FastAPI 서버 실행</strong>
+    <pre><code>uvicorn app.main:app --reload</code></pre>
+  </li>
+
+  <li><strong>Swagger UI 접속</strong> (브라우저에서 테스트 가능)<br/>
+    👉 <a href="http://127.0.0.1:8000/docs" target="_blank">http://127.0.0.1:8000/docs</a>
+  </li>
+</ol>
 
 
