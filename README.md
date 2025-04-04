@@ -33,7 +33,7 @@
 
 ## ⚙️ 기술 스택
 
-- FastAPI, Python
+- FastAPI 0.115.12, Python 3.10
 - Local LLM (예: LLaMA, Mistral)
 - PostgreSQL, MongoDB
 - Streamlit (GUI)
