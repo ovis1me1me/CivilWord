@@ -59,7 +59,7 @@ Git 클론 가능한 환경
 
 <ol>
   <li><strong>프로젝트 클론</strong>
-    <pre><code>git clone https://github.com/your-username/DONGA_SW_PROJECT_CivilWord.git
+    <pre><code>git clone https://github.com/ovis1me1me/CivilWord.git
 cd DONGA_SW_PROJECT_CivilWord</code></pre>
   </li>
 
