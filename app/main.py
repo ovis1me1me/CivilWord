@@ -1,28 +1,24 @@
 from fastapi import FastAPI
-from app.routers import ask
-from app.services.llm_service import generate_response
-from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
+from app import models #__init__.py 로 전체 모델 인식 가능
+from app.database import engine, Base
+from app.routers import complaint # 라우터
 
-app = FastAPI() # FastAPI 앱 생성
-app.include_router(ask.router)	# ask 라우터 등록
+app = FastAPI()
 
+Base.metadata.create_all(bind=engine)
+#CORS 허용(프론트 연동 시 필요)
 
-#   1. Pydantic 모델 정의
-#   요청 스키마
-class MessageRequest(BaseModel):
-    message: str    #반드시 포함되어야 하는 필드
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 추후 도메인 지정
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-#   응답 스키마
-class MessageResponse(BaseModel):
-    you_sent: str
+app.include_router(complaint.router)
 
-
-# 테스트용 핸들러
 @app.get("/")
 def root():
-	return {"message": "새올 민원자동응답 시스템입니다."}
-
-@app.post("/echo", response_model=MessageResponse)
-def echo_message(data: MessageRequest):
-    answer = generate_response(data.message)
-    return {"you_sent": answer}
+    return {"message": "DB 및 백엔드 정상 작동 중.."}
