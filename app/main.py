@@ -3,12 +3,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from app import models #__init__.py 로 전체 모델 인식 가능
 from app.database import engine, Base
 from app.routers import complaint # 라우터
-
+from app.routers import user_info 
 app = FastAPI()
 
 Base.metadata.create_all(bind=engine)
-#CORS 허용(프론트 연동 시 필요)
 
+#CORS 허용(프론트 연동 시 필요)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # 추후 도메인 지정
@@ -18,7 +18,7 @@ app.add_middleware(
 )
 
 app.include_router(complaint.router)
-
+app.include_router(user_info.router)
 @app.get("/")
 def root():
     return {"message": "DB 및 백엔드 정상 작동 중.."}

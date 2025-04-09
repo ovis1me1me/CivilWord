@@ -46,4 +46,4 @@ websockets==15.0.1
 whatthepatch==1.0.7
 yapf==0.43.0
 zipp==3.21.0
-sqlalchey==2.0.40
+sqlalchey
