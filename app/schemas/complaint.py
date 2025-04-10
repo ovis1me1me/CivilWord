@@ -20,3 +20,8 @@ class ComplaintResponse(BaseModel):
     class Config:
         orm_mode = True #SQLAlchemy 모델을자동 변환 가능하게 함
 
+class ComplaintSummaryResponse(BaseModel):
+    summary: str
+
+    class Config:
+        orm_mode = True
