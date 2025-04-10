@@ -6,6 +6,7 @@ from app.models.complaint import Complaint
 from app.models.reply import Reply
 from app.database import SessionLocal
 from typing import List, Optional 
+from app.schemas.complaint import ComplaintSummaryResponse
 
 router = APIRouter()
 
@@ -58,9 +59,9 @@ def generate_reply(id: int, db: Session = Depends(get_db)):
     reply_content = f"답변 내용: {complaint.title}에 대한 답변입니다."
 
     reply = Reply(
-        complaint_id = id,
-        content = reply_content,
-        tone="정중",
+        complaint_id=id,
+        content=reply_content,
+        tone="정중",  # 기본 톤 설정
     )
     db.add(reply)
     db.commit()
@@ -104,3 +105,70 @@ def copy_reply(reply_id: int, db: Session = Depends(get_db)):
     db.refresh(new_reply)
 
     return new_reply
+
+@router.get("/complaints/{id}/summary", response_model=ComplaintSummaryResponse)
+def get_complaint_summary(id: int, db: Session = Depends(get_db)):
+    # 민원 조회
+    complaint = db.query(Complaint).filter(Complaint.id == id).first()
+    if not complaint:
+        raise HTTPException(status_code=404, detail="Complaint not found")
+
+    # LLM 사용하여 민원 요지 추출(현재 가상 코드)
+    complaint_summary = "민원 요지: " + complaint.content[:100]  # 예시로 민원 내용 일부만 반환
+    return {"summary": complaint_summary}
+
+@router.post("/complaints/{id}/reply-summary",response_model=str)
+def input_reply_summary(id: int, summary: str, db: Session = Depends(get_db)):
+    #민원 조회
+    complaint = db.query(Complaint).filter(Complaint.id == id).first()
+    if not complaint:
+        raise HTTPException(status_code=404, detail="Complaint not found")
+
+    #답변 요지 저장
+    complaint.reply_summary = summary
+    db.commit()
+    db.refresh(complaint)
+
+    return {"message": "Reply summary saved successfully!"}
+
+@router.post("/complaints/{id}/tone",response_model=str)
+def choose_tone(id: int, tone: str, db: Session = Depends(get_db)):
+    #민원 조회
+    complaint = db.query(Complaint).filter(Complaint.id == id).first()
+    if not complaint:
+        raise HTTPException(status_code=404, detail="Complaint not found")
+
+    #어조 저장
+    complaint.tone = tone
+    db.commit()
+    db.refresh(complaint)
+
+    return{"message": f"Tone '{tone}' saved successfully!"}
+
+@router.get("/complaints/{id}/reply-options", response_model=List[ReplyBase])
+def get_reply_options(id: int, db: Session = Depends(get_db)):
+    # 해당 민원에 대한 모든 답변 조회
+    replies = db.query(Reply).filter(Reply.complaint_id == id).all()
+    if not replies:
+        raise HTTPException(status_code=404, detail="No replies found for this complaint")
+    
+    return replies
+
+
+
+@router.get("/complaints/{id}/similar-replies", response_model=List[ReplyBase])
+def get_similar_replies(id: int, db: Session = Depends(get_db)):
+    # 해당 민원 조회
+    complaint = db.query(Complaint).filter(Complaint.id == id).first()
+    if not complaint:
+        raise HTTPException(status_code=404, detail="Complaint not found")
+    
+    # 민원의 내용 또는 제목을 기준으로 유사한 답변 조회
+    similar_replies = db.query(Reply).filter(Reply.content.like(f"%{complaint.content[:50]}%")).all()
+    
+    if not similar_replies:
+        raise HTTPException(status_code=404, detail="No similar replies found")
+    
+    return similar_replies
+
+

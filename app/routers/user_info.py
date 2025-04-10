@@ -43,7 +43,7 @@ def update_user_info(data: UserInfoCreate, db: Session = Depends(get_db)):
 
     user_info.name = data.name
     user_department = data.department
-    suer_info.contact = data.contact
+    user_info.contact = data.contact
     user_info.category = data.category
 
     db.commit()
