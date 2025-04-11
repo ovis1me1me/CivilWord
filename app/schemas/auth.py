@@ -22,3 +22,5 @@ class UserLogin(BaseModel):
 
     class Config:
         orm_mode = True
+
+
