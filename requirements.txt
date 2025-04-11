@@ -46,4 +46,7 @@ websockets==15.0.1
 whatthepatch==1.0.7
 yapf==0.43.0
 zipp==3.21.0
-sqlalchey
+pyjwt==2.10.1
+passlib[bcrypt]==1.7.4
+bcrypt==4.3.0
+SQLAlchemy==2.0.40

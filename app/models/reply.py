@@ -9,6 +9,8 @@ class Reply(Base):
     id = Column(Integer, primary_key=True, index=True)
     complaint_id = Column(Integer, ForeignKey("complaint.id"))
     content = Column(Text)
-    tone = Column(String)  # 예: 단호한, 정중한, 친절한 등
+    tone = Column(String, default="정중")  # 기본 값 설정
     created_at = Column(DateTime, default=datetime.utcnow)
-    complaint = relationship("Complaint", back_populates="replies")
+
+    complaint = relationship("Complaint", back_populates="replies")  # Complaint 모델과의 관계 설정
+    history = relationship("UserReplyHistory", back_populates="reply", cascade="all, delete-orphan")
