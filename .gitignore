@@ -25,3 +25,7 @@ alembic/versions/*.pyc
 # 시스템 파일
 .DS_Store
 Thumbs.db
+
+venv/
+.venv/
+
