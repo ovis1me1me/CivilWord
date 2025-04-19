@@ -78,6 +78,7 @@ source venv/bin/activate</code></pre>
 
   <li><strong>Swagger UI 접속</strong> (브라우저에서 테스트 가능)<br/>
     👉 <a href="http://127.0.0.1:8000/docs" target="_blank">http://127.0.0.1:8000/docs</a>
+    👉 우측 상단 Authorize에서 로그인 가능
   </li>
 </ol>
 
