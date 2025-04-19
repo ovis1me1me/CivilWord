@@ -9,7 +9,6 @@ class Reply(Base):
     id = Column(Integer, primary_key=True, index=True)
     complaint_id = Column(Integer, ForeignKey("complaint.id"))
     content = Column(Text)
-    tone = Column(String, default="정중")  # 기본 값 설정
     created_at = Column(DateTime, default=datetime.utcnow)
 
     complaint = relationship("Complaint", back_populates="replies")  # Complaint 모델과의 관계 설정

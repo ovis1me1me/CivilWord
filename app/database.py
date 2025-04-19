@@ -2,14 +2,14 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-# SQLAlchemy 엔진을 설정합니다.
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"  # 데이터베이스 URL (이 예시는 SQLite)
+# PostgreSQL 연결 정보 (본인의 환경에 맞게 수정)
+SQLALCHEMY_DATABASE_URL = "postgresql://civiluser:116423@localhost/civildb"
 
-# 엔진 생성
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+# SQLAlchemy 엔진 생성
+engine = create_engine(SQLALCHEMY_DATABASE_URL)
 
-# 세션 생성
+# 세션 팩토리 생성
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Base 생성
+# 모든 모델이 상속할 Base 클래스
 Base = declarative_base()

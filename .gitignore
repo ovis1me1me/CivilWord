@@ -1,19 +1,27 @@
-# Python
+# Python 관련
 __pycache__/
-*.pyc
+*.py[cod]
+*.pyo
+*.pyd
 
-# 가상환경
-venv/
-
-# 환경변수
+# 환경 변수 / 보안 키
 .env
+.env.*
 
-# DB 백업
-*.dump
-*.sql
-dump/
+# SQLite (테스트용으로 사용했었음. 방지 차원)
+*.sqlite3
 
-# 시스템
+# VSCode / PyCharm 설정
+.vscode/
+.idea/
+
+
+# Alembic 캐시
+alembic/versions/*.pyc
+
+# 로그 파일
+*.log
+
+# 시스템 파일
 .DS_Store
 Thumbs.db
-*.tar.gz

@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+import pandas as pd
+import io 
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from app.schemas.complaint import ComplaintCreate, ComplaintResponse
 from app.schemas.reply import ReplyBase
@@ -9,6 +11,8 @@ from typing import List, Optional
 from app.schemas.complaint import ComplaintSummaryResponse
 from app.schemas.response_message import ResponseMessage
 from app.auth import get_current_user
+from datetime import datetime
+
 
 router = APIRouter()
 
@@ -19,32 +23,59 @@ def get_db():
         yield db
     finally:
         db.close()
+@router.post("/complaints/upload-excel", response_model=ResponseMessage)
+async def upload_complaints_excel(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
+):
+    user_uid = current_user["sub"]  # JWT sub 사용
+
+    contents = await file.read()
+    df = pd.read_excel(io.BytesIO(contents))
+
+    required_columns = {"제목", "민원내용", "민원 공개 여부"}
+    if not required_columns.issubset(df.columns):
+        raise HTTPException(status_code=400, detail=f"다음 컬럼이 포함되어야 합니다: {required_columns}")
+
+    for _, row in df.iterrows():
+        complaint = Complaint(
+            user_uid=user_uid,
+            title=row["제목"],
+            content=row["민원내용"],
+            urgency=0,
+            created_at=datetime.utcnow()
+        )
+        db.add(complaint)
+
+    db.commit()
+    return ResponseMessage(message=f"{len(df)}건의 민원이 등록되었습니다.")
+
 
 @router.post("/complaints/upload-text", response_model=ComplaintResponse)
 def create_complaint(data: ComplaintCreate, db: Session = Depends(get_db), current_user: str = Depends(get_current_user)):
-    # 로그인된 유저의 ID로 설정
     complaint = Complaint(
-            user_id=current_user['sub'],  # JWT에서 가져온 로그인된 유저의 'sub' 값을 사용
-            title=data.title,
-            content=data.content,
-            urgency=data.urgency,
+        user_uid=current_user["sub"],
+        title=data.title,
+        content=data.content,
+        urgency=data.urgency,
     )
     db.add(complaint)
     db.commit()
     db.refresh(complaint)
-    return complaint    # create_at까지 자동 반환 
+    return complaint
 
 @router.get("/complaints", response_model=List[ComplaintResponse])
 def get_complaints(
-        db: Session = Depends(get_db), 
-        sort: Optional[str] = None,
-        limit: Optional[int] = 10,
-        skip: Optional[int] = 0, 
-        current_user: str = Depends(get_current_user)
+    db: Session = Depends(get_db), 
+    sort: Optional[str] = None,
+    limit: Optional[int] = 10,
+    skip: Optional[int] = 0, 
+    current_user: str = Depends(get_current_user)
 ):
-    query = db.query(Complaint).filter(Complaint.user_id == current_user['sub'])  # 로그인된 유저의 민원만 조회
+    query = db.query(Complaint).filter(Complaint.user_uid == current_user['sub'])
 
-    if sort == "created":   # created_at 기준으로 정렬
+    if sort == "created":
         complaints = query.order_by(Complaint.created_at.desc()).offset(skip).limit(limit).all()
     else:
         complaints = query.offset(skip).limit(limit).all()
@@ -61,12 +92,11 @@ def generate_reply(id: int, db: Session = Depends(get_db)):
 
     # 답변 생성 로직
     reply_content = f"답변 내용: {complaint.title}에 대한 답변입니다."
-    reply_tone = complaint.tone if complaint.tone else "정중"  # 기본 톤 설정
 
     reply = Reply(
         complaint_id=id,
         content=reply_content,
-        tone=reply_tone,
+
     )
     db.add(reply)
     db.commit()
@@ -103,7 +133,7 @@ def copy_reply(reply_id: int, db: Session = Depends(get_db)):
     new_reply = Reply(
         complaint_id=reply.complaint_id,
         content=reply.content,
-        tone=reply.tone
+
     )
     db.add(new_reply)
     db.commit()
@@ -133,18 +163,6 @@ def input_reply_summary(id: int, summary: str, db: Session = Depends(get_db)):
     db.refresh(complaint)
 
     return ResponseMessage(message="Reply summary saved successfully!")
-
-@router.post("/complaints/{id}/tone", response_model=ResponseMessage)
-def choose_tone(id: int, tone: str, db: Session = Depends(get_db)):
-    complaint = db.query(Complaint).filter(Complaint.id == id).first()
-    if not complaint:
-        raise HTTPException(status_code=404, detail="Complaint not found")
-
-    complaint.tone = tone
-    db.commit()
-    db.refresh(complaint)
-
-    return ResponseMessage(message=f"Tone '{tone}' saved successfully!")
 
 @router.get("/complaints/{id}/reply-options", response_model=List[ReplyBase])
 def get_reply_options(id: int, db: Session = Depends(get_db)):
