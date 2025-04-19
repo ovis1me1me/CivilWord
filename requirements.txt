@@ -50,3 +50,6 @@ pyjwt==2.10.1
 passlib[bcrypt]==1.7.4
 bcrypt==4.3.0
 SQLAlchemy==2.0.40
+psycopg2-binary==2.9.9
+pandas==2.2.2
+openpyxl==3.1.2
