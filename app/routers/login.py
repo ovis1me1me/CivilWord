@@ -24,7 +24,7 @@ def login_for_access_token(
     # 로그인 ID는 user_id 기준으로 조회
     user = db.query(User).filter(User.user_id == form_data.username).first()
 
-    if not user or not verify_password(form_data.password, user.hashed_password):
+    if not user or not verify_password(form_data.password, user.password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     # JWT에는 고유 식별자인 user_uid를 넣음

@@ -29,7 +29,7 @@ async def upload_complaints_excel(
     db: Session = Depends(get_db),
     current_user: str = Depends(get_current_user)
 ):
-    user_uid = current_user["sub"]  # JWT sub 사용
+    user_uid = current_user.user_uid  # JWT sub 사용
 
     contents = await file.read()
     df = pd.read_excel(io.BytesIO(contents))
@@ -55,7 +55,7 @@ async def upload_complaints_excel(
 @router.post("/complaints/upload-text", response_model=ComplaintResponse)
 def create_complaint(data: ComplaintCreate, db: Session = Depends(get_db), current_user: str = Depends(get_current_user)):
     complaint = Complaint(
-        user_uid=current_user["sub"],
+        user_uid=current_user.user_uid,
         title=data.title,
         content=data.content,
         urgency=data.urgency,
@@ -73,7 +73,7 @@ def get_complaints(
     skip: Optional[int] = 0, 
     current_user: str = Depends(get_current_user)
 ):
-    query = db.query(Complaint).filter(Complaint.user_uid == current_user['sub'])
+    query = db.query(Complaint).filter(Complaint.user_uid == current_user.user_uid)
 
     if sort == "created":
         complaints = query.order_by(Complaint.created_at.desc()).offset(skip).limit(limit).all()
@@ -105,6 +105,7 @@ def generate_reply(id: int, db: Session = Depends(get_db)):
     db.refresh(reply)
 
     return reply
+    
 @router.post("/complaints/{id}/generate-reply-again", response_model=ReplyBase)
 def generate_reply_again(id: int, db: Session = Depends(get_db)):
     complaint = db.query(Complaint).filter(Complaint.id == id).first()
@@ -112,7 +113,7 @@ def generate_reply_again(id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Complaint not found")
 
     # 자동 답변 생성
-    new_content = generate_auto_reply(complaint.content)
+    new_content = generate_reply(complaint.content)
 
     # 기존 답변 삭제 (있다면)
     existing_reply = db.query(Reply).filter(Reply.complaint_id == id).first()

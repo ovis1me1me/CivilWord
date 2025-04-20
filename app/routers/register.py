@@ -2,11 +2,16 @@ from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from app.database import SessionLocal
 from app.models.user import User
-from app.schemas.auth import UserCreate
+from app.models.user_info import UserInfo
 from app.auth import get_password_hash
-from uuid import uuid4  # 외부 식별자용
+import uuid
+import bcrypt
+from app.schemas.auth import RegisterUserRequest
 
 router = APIRouter()
+
+def hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 # DB 세션 의존성 주입
 def get_db():
@@ -17,24 +22,28 @@ def get_db():
         db.close()
 
 @router.post("/register")
-def register_user(data: UserCreate, db: Session = Depends(get_db)):
-    # 중복된 user_id 확인
-    existing_user = db.query(User).filter(User.user_id == data.user_id).first()
+def register_user(data: RegisterUserRequest, db: Session = Depends(get_db)):
+    existing_user = db.query(User).filter(User.user_id == data.user.user_id).first()
     if existing_user:
-        raise HTTPException(status_code=400, detail="User ID already taken")
+        raise HTTPException(status_code=400, detail="User ID already exists")
 
-    # 비밀번호 해싱
-    hashed_password = get_password_hash(data.password)
+    user_uid = str(uuid.uuid4())
 
-    # 유저 생성 (외부 식별자는 UUID 생성)
     new_user = User(
-        user_uid=str(uuid4()),
-        user_id=data.user_id,
-        name=data.name,
-        hashed_password=hashed_password
+        user_uid=user_uid,
+        user_id=data.user.user_id,
+        password=hash_password(data.user.password)
     )
     db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
 
-    return {"message": "User created successfully"}
+    new_user_info = UserInfo(
+        user_uid=user_uid,
+        name=data.user_info.name,
+        department=data.user_info.department,
+        contact=data.user_info.contact,
+    )
+    db.add(new_user_info)
+
+    db.commit()
+    return {"message": "User registered successfully"}
+
