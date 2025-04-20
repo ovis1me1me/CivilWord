@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.models.user import User
-from app.schemas.auth import UserCreate, Token,UserLogin
+from app.schemas.auth import Token
 from app.auth import create_access_token, verify_password
 from app.database import SessionLocal
+from fastapi.security import OAuth2PasswordRequestForm
 
 router = APIRouter()
 
@@ -16,14 +17,16 @@ def get_db():
         db.close()
 
 @router.post("/login", response_model=Token)
-def login_for_access_token(data: UserLogin, db: Session = Depends(get_db)):
-    # UserLogin에서 받은 username으로 DB에서 사용자 검색
-    user = db.query(User).filter(User.username == data.username).first()
-    
-    # 유저가 없거나 비밀번호가 일치하지 않으면 에러 반환
-    if not user or not verify_password(data.password, user.hashed_password):
+def login_for_access_token(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db)
+):
+    # 로그인 ID는 user_id 기준으로 조회
+    user = db.query(User).filter(User.user_id == form_data.username).first()
+
+    if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    
-    # JWT 토큰 생성
-    access_token = create_access_token(data={"sub": user.username})
+
+    # JWT에는 고유 식별자인 user_uid를 넣음
+    access_token = create_access_token(data={"sub": user.user_uid})
     return {"access_token": access_token, "token_type": "bearer"}
