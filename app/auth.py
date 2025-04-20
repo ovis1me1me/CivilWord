@@ -5,6 +5,11 @@ from passlib.context import CryptContext
 from fastapi import HTTPException, Depends
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.declarative import declarative_base
+from app.database import get_db
+from sqlalchemy.orm import Session
+from app.models.user import User
+
+
 
 # 보안 설정
 SECRET_KEY = "your_secret_key"
@@ -39,5 +44,15 @@ def verify_token(token: str):
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")  # tokenUrl 경로 주의
 
 # 현재 로그인된 사용자 추출
-def get_current_user(token: str = Depends(oauth2_scheme)):
-    return verify_token(token)
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_uid: str = payload.get("sub")
+        if user_uid is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    user = db.query(User).filter(User.user_uid == user_uid).first()
+    if user is None:
+        raise credentials_exception
+    return user

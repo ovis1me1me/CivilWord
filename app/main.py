@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
-from app.routers import complaint, user_info, login, register
+from app.routers import complaint, user_info, login, register, user_history
+
 
 app = FastAPI()
 
@@ -22,6 +23,7 @@ app.include_router(complaint.router)
 app.include_router(user_info.router)
 app.include_router(login.router)
 app.include_router(register.router)
+app.include_router(user_history.router)
 
 # 루트 엔드포인트
 @app.get("/")

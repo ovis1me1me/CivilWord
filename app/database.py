@@ -13,3 +13,18 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # 모든 모델이 상속할 Base 클래스
 Base = declarative_base()
+
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine
+
+SQLALCHEMY_DATABASE_URL = "postgresql://civiluser:116423@localhost/civildb"
+engine = create_engine(SQLALCHEMY_DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+

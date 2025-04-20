@@ -77,6 +77,8 @@ def get_complaints(
 
     if sort == "created":
         complaints = query.order_by(Complaint.created_at.desc()).offset(skip).limit(limit).all()
+    elif sort == "urgency":
+        query = query.order_by(Complaint.urgency.desc()).offset(skip).limit(limit).all()
     else:
         complaints = query.offset(skip).limit(limit).all()
 
@@ -103,6 +105,28 @@ def generate_reply(id: int, db: Session = Depends(get_db)):
     db.refresh(reply)
 
     return reply
+@router.post("/complaints/{id}/generate-reply-again", response_model=ReplyBase)
+def generate_reply_again(id: int, db: Session = Depends(get_db)):
+    complaint = db.query(Complaint).filter(Complaint.id == id).first()
+    if not complaint:
+        raise HTTPException(status_code=404, detail="Complaint not found")
+
+    # 자동 답변 생성
+    new_content = generate_auto_reply(complaint.content)
+
+    # 기존 답변 삭제 (있다면)
+    existing_reply = db.query(Reply).filter(Reply.complaint_id == id).first()
+    if existing_reply:
+        db.delete(existing_reply)
+        db.commit()
+
+    # 새 답변 생성 및 저장
+    new_reply = Reply(content=new_content, complaint_id=id)
+    db.add(new_reply)
+    db.commit()
+    db.refresh(new_reply)
+
+    return new_reply
 
 @router.put("/replies/{reply_id}", response_model=ReplyBase)
 def update_reply(reply_id: int, content: str, db: Session = Depends(get_db)):
@@ -124,22 +148,22 @@ def get_replies(id: int, db: Session = Depends(get_db)):
 
     return replies
 
-@router.post("/replies/{reply_id}/copy", response_model=ReplyBase)
-def copy_reply(reply_id: int, db: Session = Depends(get_db)):
-    reply = db.query(Reply).filter(Reply.id == reply_id).first()
-    if not reply:
-        raise HTTPException(status_code=404, detail="Reply not found")
-    # 새로운 답변 복사 생성
-    new_reply = Reply(
-        complaint_id=reply.complaint_id,
-        content=reply.content,
+# @router.post("/replies/{reply_id}/copy", response_model=ReplyBase)
+# def copy_reply(reply_id: int, db: Session = Depends(get_db)):
+#     reply = db.query(Reply).filter(Reply.id == reply_id).first()
+#     if not reply:
+#         raise HTTPException(status_code=404, detail="Reply not found")
+#     # 새로운 답변 복사 생성
+#     new_reply = Reply(
+#         complaint_id=reply.complaint_id,
+#         content=reply.content,
 
-    )
-    db.add(new_reply)
-    db.commit()
-    db.refresh(new_reply)
+#     )
+#     db.add(new_reply)
+#     db.commit()
+#     db.refresh(new_reply)
 
-    return new_reply
+#     return new_reply
 
 @router.get("/complaints/{id}/summary", response_model=ComplaintSummaryResponse)
 def get_complaint_summary(id: int, db: Session = Depends(get_db)):
@@ -164,14 +188,14 @@ def input_reply_summary(id: int, summary: str, db: Session = Depends(get_db)):
 
     return ResponseMessage(message="Reply summary saved successfully!")
 
-@router.get("/complaints/{id}/reply-options", response_model=List[ReplyBase])
-def get_reply_options(id: int, db: Session = Depends(get_db)):
-    # 해당 민원에 대한 모든 답변 조회
-    replies = db.query(Reply).filter(Reply.complaint_id == id).all()
-    if not replies:
-        raise HTTPException(status_code=404, detail="No replies found for this complaint")
+# @router.get("/complaints/{id}/reply-options", response_model=List[ReplyBase])
+# def get_reply_options(id: int, db: Session = Depends(get_db)):
+#     # 해당 민원에 대한 모든 답변 조회
+#     replies = db.query(Reply).filter(Reply.complaint_id == id).all()
+#     if not replies:
+#         raise HTTPException(status_code=404, detail="No replies found for this complaint")
     
-    return replies
+#     return replies
 
 
 @router.get("/complaints/{id}/similar-replies", response_model=List[ReplyBase])
