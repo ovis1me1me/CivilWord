@@ -112,16 +112,15 @@ def generate_reply_again(id: int, db: Session = Depends(get_db)):
     if not complaint:
         raise HTTPException(status_code=404, detail="Complaint not found")
 
-    # 자동 답변 생성
-    new_content = generate_reply(complaint.content)
-
     # 기존 답변 삭제 (있다면)
     existing_reply = db.query(Reply).filter(Reply.complaint_id == id).first()
     if existing_reply:
         db.delete(existing_reply)
         db.commit()
 
-    # 새 답변 생성 및 저장
+    # 새 답변 직접 생성
+    new_content = f"답변 내용: {complaint.title}에 대한 답변입니다."
+
     new_reply = Reply(content=new_content, complaint_id=id)
     db.add(new_reply)
     db.commit()
