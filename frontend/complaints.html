@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>민원 목록 및 답변 생성</title>
+</head>
+<body>
+    <h1>민원 목록</h1>
+    <button id="loadComplaints">민원 불러오기</button>
+    <div id="complaintsList"></div>
+
+    <script>
+        document.getElementById('loadComplaints').addEventListener('click', async () => {
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                alert('로그인이 필요합니다.');
+                window.location.href = 'login.html';
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:8000/complaints', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    }
+                });
+
+                if (response.ok) {
+                    const complaints = await response.json();
+                    displayComplaints(complaints);
+                } else {
+                    alert('민원 불러오기 실패');
+                }
+            } catch (error) {
+                alert('오류 발생: ' + error);
+            }
+        });
+
+        function displayComplaints(complaints) {
+            const listDiv = document.getElementById('complaintsList');
+            listDiv.innerHTML = '';  // 초기화
+
+            complaints.forEach(complaint => {
+                const item = document.createElement('div');
+                item.innerHTML = `
+                    <p><strong>제목:</strong> ${complaint.title}</p>
+                    <p><strong>내용:</strong> ${complaint.content}</p>
+                    <button onclick="generateReply(${complaint.id})">답변 생성</button>
+                    <hr>
+                `;
+                listDiv.appendChild(item);
+            });
+        }
+
+        async function generateReply(id) {
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                alert('로그인이 필요합니다.');
+                window.location.href = 'login.html';
+                return;
+            }
+
+            try {
+                const response = await fetch(`http://localhost:8000/complaints/${id}/generate-reply`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    }
+                });
+
+                if (response.ok) {
+                    alert('답변 생성 완료!');
+                } else {
+                    const errorData = await response.json();
+                    alert('답변 생성 실패: ' + errorData.detail);
+                }
+            } catch (error) {
+                alert('오류 발생: ' + error);
+            }
+        }
+    </script>
+</body>
+</html>
