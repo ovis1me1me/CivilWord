@@ -79,8 +79,7 @@ source venv/bin/activate</code></pre>
   </li>
 
   <li><strong>postgreSQL 서버 시작</strong>
-    <pre><code>sudo service postgresql start
-    </code></pre>
+    <pre><code>sudo service postgresql start</code></pre>
   </li>
   
   <li>
