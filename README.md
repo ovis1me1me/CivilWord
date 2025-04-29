@@ -71,6 +71,18 @@ source venv/bin/activate</code></pre>
   <li><strong>의존성 설치</strong>
     <pre><code>pip install -r requirements.txt</code></pre>
   </li>
+  
+  <li><strong>postgreSQL 설치</strong>
+    <pre><code>sudo apt update
+      sudo apt install postgresql postgresql-contrib
+    </code></pre>
+  </li>
+
+  <li><strong>postgreSQL 서버 시작</strong>
+    <pre><code>sudo service postgresql start
+    </code></pre>
+  </li>
+  
   <li>
     <strong>PostgreSQL 비밀번호 설정 (필수)</strong><br/><br/> PostgreSQL 설치 직후 기본 계정의 비밀번호를 다음과 같이 변경합니다. 
     <pre><code>sudo -i -u postgres psql ALTER USER postgres WITH PASSWORD '116423'; \q exit</code></pre> 
