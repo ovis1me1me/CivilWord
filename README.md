@@ -71,6 +71,10 @@ source venv/bin/activate</code></pre>
   <li><strong>의존성 설치</strong>
     <pre><code>pip install -r requirements.txt</code></pre>
   </li>
+  
+  <li><strong>데이터베이스 초기화</strong>
+    <pre><code>python3 reset_tables.py</code></pre>
+  </li>
 
   <li><strong>FastAPI 서버 실행</strong>
     <pre><code>uvicorn app.main:app --reload</code></pre>
