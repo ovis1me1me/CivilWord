@@ -53,3 +53,5 @@ SQLAlchemy==2.0.40
 psycopg2-binary==2.9.9
 pandas==2.2.2
 openpyxl==3.1.2
+alembic==1.13.1
+asyncpg==0.29.0
