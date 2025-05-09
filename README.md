@@ -71,6 +71,26 @@ source venv/bin/activate</code></pre>
   <li><strong>의존성 설치</strong>
     <pre><code>pip install -r requirements.txt</code></pre>
   </li>
+  
+  <li><strong>postgreSQL 설치</strong>
+    <pre><code>sudo apt update
+      sudo apt install postgresql postgresql-contrib
+    </code></pre>
+  </li>
+
+  <li><strong>postgreSQL 서버 시작</strong>
+    <pre><code>sudo service postgresql start</code></pre>
+  </li>
+  
+  <li>
+    <strong>PostgreSQL 비밀번호 설정 (필수)</strong><br/><br/> PostgreSQL 설치 직후 기본 계정의 비밀번호를 다음과 같이 변경합니다. 
+    <pre><code>sudo -i -u postgres psql ALTER USER postgres WITH PASSWORD '116423'; \q exit</code></pre> 
+    👉 Ubuntu에서는 위 명령어 순서대로 입력합니다.<br/> 
+  </li>
+  
+  <li><strong>데이터베이스 초기화</strong>
+    <pre><code>python3 reset_tables.py</code></pre>
+  </li>
 
   <li><strong>FastAPI 서버 실행</strong>
     <pre><code>uvicorn app.main:app --reload</code></pre>
@@ -78,6 +98,7 @@ source venv/bin/activate</code></pre>
 
   <li><strong>Swagger UI 접속</strong> (브라우저에서 테스트 가능)<br/>
     👉 <a href="http://127.0.0.1:8000/docs" target="_blank">http://127.0.0.1:8000/docs</a>
+    👉 우측 상단 Authorize에서 로그인 가능
   </li>
 </ol>
 
