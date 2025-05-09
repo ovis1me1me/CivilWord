@@ -2,9 +2,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
 from app.routers import complaint, user_info, login, register, user_history
+from app.services.llm_service import generate_answer, InputSchema
+from pydantic import BaseModel
+
 
 
 app = FastAPI()
+
+# LLM용 Pydantic 모델 정의
+class Complaint(BaseModel):
+    content: str
 
 # CORS 설정
 app.add_middleware(
@@ -37,3 +44,9 @@ from app.auth import get_current_user
 @app.get("/me")
 def get_me(current_user: dict = Depends(get_current_user)):
     return {"user_uid": current_user["sub"]}
+
+# LLM 답변 생성 API 등록
+@app.post("/generate_answer")
+def handle_complaint(complaint: Complaint):
+    response = generate_answer(InputSchema(content=complaint.content))
+    return {"answer": response}
