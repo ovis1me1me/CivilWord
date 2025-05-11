@@ -7,6 +7,7 @@ class ComplaintCreate(BaseModel):
     title: str
     content: str
     urgency: Optional[int] = 0
+    is_public: Optional[bool] = False
 
 # 민원 조회 응답용
 class ComplaintResponse(BaseModel):
@@ -15,6 +16,7 @@ class ComplaintResponse(BaseModel):
     title: str
     content: str
     urgency: int
+    is_public: bool
     created_at: datetime
 
     class Config:

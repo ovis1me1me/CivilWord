@@ -13,6 +13,8 @@ from app.schemas.complaint import ComplaintSummaryResponse
 from app.schemas.response_message import ResponseMessage
 from app.auth import get_current_user
 from datetime import datetime
+from fastapi.responses import StreamingResponse
+import pandas as pd
 
 
 router = APIRouter()
@@ -42,33 +44,34 @@ async def upload_complaints_excel(
         raise HTTPException(status_code=400, detail=f"다음 컬럼이 포함되어야 합니다: {required_columns}")
 
     for _, row in df.iterrows():
+        is_public_str = str(row["민원 공개 여부"]).strip()
+
+        if is_public_str == "공개":
+            is_public = True
+        elif is_public_str == "비공개":
+            is_public = False
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"민원 공개 여부는 '공개' 또는 '비공개'만 허용됩니다. (입력값: {is_public_str})"
+            )
+
+
         complaint = Complaint(
             user_uid=user_uid,
             title=row["제목"],
             content=row["민원내용"],
             urgency=0,
+            is_public=is_public,
             created_at=datetime.utcnow()
         )
         db.add(complaint)
+
 
     db.commit()
     return ResponseMessage(message=f"{len(df)}건의 민원이 등록되었습니다.")
 
 
-# @router.post("/complaints/upload-text", response_model=ComplaintResponse)
-# def create_complaint(data: ComplaintCreate, db: Session = Depends(get_db), current_user: str = Depends(get_current_user)):
-#     complaint = Complaint(
-#         user_uid=current_user.user_uid,
-#         title=data.title,
-#         content=data.content,
-#         urgency=data.urgency,
-#     )
-#     db.add(complaint)
-#     db.commit()
-#     db.refresh(complaint)
-#     return complaint
-
-# 민원 조회(본인 것만) 
 @router.get("/complaints", response_model=List[ComplaintResponse])
 def get_complaints(
     db: Session = Depends(get_db), 
@@ -241,6 +244,26 @@ def get_complaint_summary(
     complaint_summary = "민원 요지: " + complaint.content[:100]
     return ComplaintSummaryResponse(summary=complaint_summary)
 
+@router.get("/complaints/{id}/reply-summary", response_model=ComplaintSummaryResponse)
+def get_reply_summary(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    complaint = db.query(Complaint).filter(
+        Complaint.id == id,
+        Complaint.user_uid == current_user.user_uid
+    ).first()
+
+    if not complaint:
+        raise HTTPException(status_code=404, detail="해당 민원이 없거나 권한이 없습니다.")
+
+    if not complaint.reply_summary:
+        raise HTTPException(status_code=404, detail="요약이 아직 저장되지 않았습니다.")
+
+    return ComplaintSummaryResponse(summary=complaint.reply_summary)
+
+
 @router.post("/complaints/{id}/reply-summary", response_model=ResponseMessage)
 def input_reply_summary(
     id: int,
@@ -299,3 +322,52 @@ def get_similar_replies(
         raise HTTPException(status_code=404, detail="유사한 답변이 없습니다.")
 
     return similar_replies
+
+
+@router.get("/complaints/download-excel")
+def download_complaints_excel(
+    ids: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # 1. ID 파싱
+    id_list = [int(i) for i in ids.split(",") if i.isdigit()]
+
+    if not id_list:
+        raise HTTPException(status_code=400, detail="유효한 민원 ID 목록을 전달해주세요.")
+
+    # 2. 본인 소유 민원 + 답변 조회
+    complaints = db.query(Complaint).filter(
+        Complaint.user_uid == current_user.user_uid,
+        Complaint.id.in_(id_list)
+    ).all()
+
+    if not complaints:
+        raise HTTPException(status_code=404, detail="조회된 민원이 없습니다.")
+
+    rows = []
+    for complaint in complaints:
+        reply = db.query(Reply).filter(Reply.complaint_id == complaint.id).first()
+        rows.append({
+            "민원 ID": complaint.id,
+            "제목": complaint.title,
+            "내용": complaint.content,
+            "등록일": complaint.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            "공개 여부": "공개" if complaint.is_public else "비공개",
+            "답변": reply.content if reply else "(답변 없음)"
+        })
+
+    # 3. DataFrame → 엑셀 변환
+    df = pd.DataFrame(rows)
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name='민원내역')
+
+    output.seek(0)
+
+    # 4. 응답 반환
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=complaints.xlsx"}
+    )
