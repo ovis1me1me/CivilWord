@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
-from app.routers import complaint, user_info, login, register, user_history
+from app.routers import complaint_history, complaint, user_info, login, register, user_history,user
 from app.services.llm_service import generate_answer, InputSchema
 from pydantic import BaseModel
 
@@ -31,6 +31,8 @@ app.include_router(user_info.router)
 app.include_router(login.router)
 app.include_router(register.router)
 app.include_router(user_history.router)
+app.include_router(user.router)
+app.include_router(complaint_history.router)
 
 # 루트 엔드포인트
 @app.get("/")

@@ -6,7 +6,6 @@ from datetime import datetime
 class ComplaintCreate(BaseModel):
     title: str
     content: str
-    urgency: Optional[int] = 0
     is_public: Optional[bool] = False
 
 # 민원 조회 응답용
@@ -15,9 +14,11 @@ class ComplaintResponse(BaseModel):
     user_uid: str
     title: str
     content: str
-    urgency: int
     is_public: bool
     created_at: datetime
+    summary: Optional[str] = None         
+    reply_summary: Optional[str] = None   
+    reply_status: str
 
     class Config:
         orm_mode = True
@@ -28,3 +29,6 @@ class ComplaintSummaryResponse(BaseModel):
 
     class Config:
         orm_mode = True
+
+class ReplyStatusUpdateRequest(BaseModel):
+    status: str  # '답변전', '수정중', '답변완료' 중 하나여야 함

@@ -9,7 +9,7 @@ from app.models.reply import Reply
 from app.models.user import User 
 from app.database import SessionLocal
 from typing import List, Optional
-from app.schemas.complaint import ComplaintSummaryResponse
+from app.schemas.complaint import ComplaintSummaryResponse, ReplyStatusUpdateRequest
 from app.schemas.response_message import ResponseMessage
 from app.auth import get_current_user
 from datetime import datetime
@@ -61,7 +61,6 @@ async def upload_complaints_excel(
             user_uid=user_uid,
             title=row["제목"],
             content=row["민원내용"],
-            urgency=0,
             is_public=is_public,
             created_at=datetime.utcnow()
         )
@@ -84,13 +83,35 @@ def get_complaints(
 
     if sort == "created":
         complaints = query.order_by(Complaint.created_at.desc()).offset(skip).limit(limit).all()
-    elif sort == "urgency":
-        query = query.order_by(Complaint.urgency.desc()).offset(skip).limit(limit).all()
     else:
         complaints = query.offset(skip).limit(limit).all()
 
     return complaints
 
+@router.delete("/complaints/{id}", response_model=ResponseMessage)
+def delete_complaint(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # 민원 존재 및 소유 확인
+    complaint = db.query(Complaint).filter(
+        Complaint.id == id,
+        Complaint.user_uid == current_user.user_uid
+    ).first()
+
+    if not complaint:
+        raise HTTPException(status_code=404, detail="해당 민원이 없거나 권한이 없습니다.")
+
+    reply = db.query(Reply).filter(Reply.complaint_id == id).first()
+    if reply:
+        db.delete(reply)
+
+    # 민원 삭제 (민원 요약 필드도 같이 삭제됨)
+    db.delete(complaint)
+    db.commit()
+
+    return ResponseMessage(message=f"민원 {id}번과 관련된 답변 및 요약이 모두 삭제되었습니다.")
 
 # 민원 응답(본인 것만) 
 @router.post("/complaints/{id}/generate-reply", response_model=ReplyBase)
@@ -242,7 +263,11 @@ def get_complaint_summary(
 
     # 요약 처리 (예시)
     complaint_summary = "민원 요지: " + complaint.content[:100]
+    complaint.summary = complaint_summary
+    db.commit()
+    db.refresh(complaint)
     return ComplaintSummaryResponse(summary=complaint_summary)
+    
 
 @router.get("/complaints/{id}/reply-summary", response_model=ComplaintSummaryResponse)
 def get_reply_summary(
@@ -263,6 +288,29 @@ def get_reply_summary(
 
     return ComplaintSummaryResponse(summary=complaint.reply_summary)
 
+
+@router.put("/complaints/{id}/reply-summary", response_model=ResponseMessage)
+def update_reply_summary(
+    id: int,
+    summary: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # 본인 민원인지 확인
+    complaint = db.query(Complaint).filter(
+        Complaint.id == id,
+        Complaint.user_uid == current_user.user_uid
+    ).first()
+
+    if not complaint:
+        raise HTTPException(status_code=404, detail="해당 민원이 없거나 권한이 없습니다.")
+
+    # 요약 저장 (수정)
+    complaint.reply_summary = summary
+    db.commit()
+    db.refresh(complaint)
+
+    return ResponseMessage(message="Reply summary updated successfully!")
 
 @router.post("/complaints/{id}/reply-summary", response_model=ResponseMessage)
 def input_reply_summary(
@@ -349,7 +397,7 @@ def download_complaints_excel(
     for complaint in complaints:
         reply = db.query(Reply).filter(Reply.complaint_id == complaint.id).first()
         rows.append({
-            "민원 ID": complaint.id,
+
             "제목": complaint.title,
             "내용": complaint.content,
             "등록일": complaint.created_at.strftime("%Y-%m-%d %H:%M:%S"),
@@ -371,3 +419,28 @@ def download_complaints_excel(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": "attachment; filename=complaints.xlsx"}
     )
+
+
+@router.put("/complaints/{id}/reply-status", response_model=ResponseMessage)
+def update_reply_status(
+    id: int,
+    data: ReplyStatusUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    complaint = db.query(Complaint).filter(
+        Complaint.id == id,
+        Complaint.user_uid == current_user.user_uid
+    ).first()
+    if not complaint:
+        raise HTTPException(status_code=404, detail="해당 민원이 없거나 권한이 없습니다.")
+
+    allowed_status = {"답변전", "수정중", "답변완료"}
+    if data.status not in allowed_status:
+        raise HTTPException(status_code=400, detail=f"상태는 {allowed_status} 중 하나여야 합니다.")
+
+    complaint.reply_status = data.status
+    db.commit()
+    db.refresh(complaint)
+
+    return ResponseMessage(message=f"답변 상태가 '{data.status}'(으)로 변경되었습니다.")

@@ -1,3 +1,4 @@
+# app.schemas/auth
 from pydantic import BaseModel
 from typing import Optional
 
@@ -5,6 +6,8 @@ from typing import Optional
 class UserCreate(BaseModel):
     user_id: str       # 사용자가 입력하는 로그인 ID
     password: str
+    question: str     
+    answer: str 
 
     class Config:
         orm_mode = True
@@ -14,6 +17,7 @@ class UserInfoCreate(BaseModel):
     name: str
     department: Optional[str] = None
     contact: Optional[str] = None
+    email: Optional[str] = None
 
     class Config:
         orm_mode = True
@@ -35,3 +39,12 @@ class UserLogin(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+
+class ChangePasswordRequest(BaseModel):
+    user_id: str
+    answer: str
+    new_password: str
+
+class ChangePasswordResponse(BaseModel):
+    message: str
