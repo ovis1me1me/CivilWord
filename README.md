@@ -1,4 +1,4 @@
-# 🧠 DONGA_SW_PROJECT_CivilWord
+#  DONGA_SW_PROJECT_CivilWord
 
 **Local LLM을 활용한 새올 민원 자동 답변 생성기**  
 > **동아대학교 소프트웨어 졸업작품 프로젝트**
@@ -17,21 +17,21 @@
 
 ---
 
-## 📂 프로젝트 구조 안내
+##  프로젝트 구조 안내
 
 - `weekly/` 폴더 : 주간보고일지 저장 위치  
 - `.ipynb`, `src/`, `data/` 등 : 각 파트별 코드 및 데이터 저장 예정  
 
 ---
 
-## 📒 관련 자료
+##  관련 자료
 
 - 📌 **노션 프로젝트 대시보드**  
   [🔗 Notion 바로가기](https://www.notion.so/1ba190a28eaf80a39a12cfcd79b7e33b?v=1ba190a28eaf8073a3db000caf85ee67)
 
 ---
 
-## ⚙️ 기술 스택
+## ⚙ 기술 스택
 
 - FastAPI 0.115.12, Python 3.10
 - Local LLM (예: LLaMA, Mistral)
@@ -41,14 +41,14 @@
 
 ---
 
-## 🗓️ 일정 관리
+## 🗓 일정 관리
 
 - **주간보고일지**는 `weekly/` 폴더에 `.docx` 형식으로 저장
 - 매주 일요일 오후 기준으로 업데이트
 
 ---
-🚀 백엔드 실행 가이드 (FastAPI)
-🧩 기본 요구사항
+ 백엔드 실행 가이드 (FastAPI)
+ 기본 요구사항
 Python 3.10+
 
 WSL 또는 Ubuntu 22.04
@@ -99,8 +99,11 @@ source venv/bin/activate</code></pre>
   </code></pre> 
   </li>
   
-  <li><strong>데이터베이스 초기화</strong>
-    <pre><code>python3 reset_tables.py</code></pre>
+  <li><strong>데이터베이스 초기화 및 더미데이터 생성</strong>
+    <pre><code>
+      python3 reset_tables.py
+      python3 create_dummy.py
+    </code></pre>
   </li>
 
   <li><strong>FastAPI 서버 실행</strong>
