@@ -5,7 +5,7 @@
 
 ---
 
-## 👥 팀 구성
+##  팀 구성
 
 | 역할 | 이름 | 학번 | 이메일 |
 |------|------|------|--------|
@@ -26,8 +26,8 @@
 
 ##  관련 자료
 
-- 📌 **노션 프로젝트 대시보드**  
-  [🔗 Notion 바로가기](https://www.notion.so/1ba190a28eaf80a39a12cfcd79b7e33b?v=1ba190a28eaf8073a3db000caf85ee67)
+-  **노션 프로젝트 대시보드**  
+  [ Notion 바로가기](https://www.notion.so/1ba190a28eaf80a39a12cfcd79b7e33b?v=1ba190a28eaf8073a3db000caf85ee67)
 
 ---
 
