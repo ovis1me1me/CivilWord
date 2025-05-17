@@ -88,6 +88,17 @@ source venv/bin/activate</code></pre>
     👉 Ubuntu에서는 위 명령어 순서대로 입력합니다.<br/> 
   </li>
   
+  <li>
+      <strong>데이터베이스 삭제 및 재생성 (선택 사항)</strong>
+  
+  <pre><code>
+  sudo -i -u postgres psql
+  DROP DATABASE IF EXISTS civildb;
+  CREATE DATABASE civildb OWNER civiluser;
+  \q
+  </code></pre> 
+  </li>
+  
   <li><strong>데이터베이스 초기화</strong>
     <pre><code>python3 reset_tables.py</code></pre>
   </li>
