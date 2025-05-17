@@ -33,6 +33,8 @@ def update_user_info(data: UserInfoCreate, current_user: dict = Depends(get_curr
     user_info.name = data.name
     user_info.department = data.department
     user_info.contact = data.contact
+    user_info.email = data.email
+
     db.commit()
     db.refresh(user_info)
     
@@ -49,6 +51,7 @@ def create_user_info(data: UserInfoCreate, current_user: dict = Depends(get_curr
         name=data.name,
         department=data.department,
         contact=data.contact,
+        email=data.email,
     )
     db.add(user_info)
     db.commit()

@@ -1,3 +1,4 @@
+#app.routers.register
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from app.database import SessionLocal
@@ -32,7 +33,9 @@ def register_user(data: RegisterUserRequest, db: Session = Depends(get_db)):
     new_user = User(
         user_uid=user_uid,
         user_id=data.user.user_id,
-        password=hash_password(data.user.password)
+        password=hash_password(data.user.password),
+        question=data.user.question,   
+        answer=data.user.answer,
     )
     db.add(new_user)
 
@@ -41,6 +44,7 @@ def register_user(data: RegisterUserRequest, db: Session = Depends(get_db)):
         name=data.user_info.name,
         department=data.user_info.department,
         contact=data.user_info.contact,
+        email=data.user_info.email,
     )
     db.add(new_user_info)
 
