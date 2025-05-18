@@ -15,7 +15,7 @@ from app.auth import get_current_user
 from datetime import datetime
 from fastapi.responses import StreamingResponse
 import pandas as pd
-
+from sqlalchemy import text
 
 router = APIRouter()
 
@@ -346,31 +346,46 @@ def input_reply_summary(
 #     return replies
 
 
-@router.get("/complaints/{id}/similar-replies", response_model=List[ReplyBase])
-def get_similar_replies(
+
+@router.get("/complaints/{id}/history-similar", response_model=List[ReplyBase])
+def get_similar_histories(
     id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # 본인 민원인지 확인
+    # 1. 본인 민원 확인
     complaint = db.query(Complaint).filter(
         Complaint.id == id,
         Complaint.user_uid == current_user.user_uid
     ).first()
-    
+
     if not complaint:
         raise HTTPException(status_code=404, detail="해당 민원이 없거나 권한이 없습니다.")
 
-    # 유사한 답변 검색
-    similar_replies = db.query(Reply).filter(
-        Reply.content.like(f"%{complaint.content[:50]}%")
-    ).all()
+    # 2. Full Text Search 질의 생성
+    query_text = " & ".join(complaint.content[:50].split())
 
-    if not similar_replies:
-        raise HTTPException(status_code=404, detail="유사한 답변이 없습니다.")
+    # 3. PostgreSQL 직접 실행
+    sql = text("""
+        SELECT urh.*
+        FROM user_reply_history urh
+        WHERE to_tsvector('simple', final_content) @@ to_tsquery('simple', :query)
+        ORDER BY ts_rank(to_tsvector('simple', final_content), to_tsquery('simple', :query)) DESC
+        LIMIT 10
+    """)
+    rows = db.execute(sql, {"query": query_text}).fetchall()
 
-    return similar_replies
+    if not rows:
+        raise HTTPException(status_code=404, detail="유사한 민원이 없습니다.")
 
+    # 4. 수동으로 스키마 변환 (예: ReplyBase 포함 필드 기준)
+    results = []
+    for row in rows:
+        results.append({
+            "content": row.final_content,  # ReplyBase 스키마에 맞게 변환
+        })
+
+    return results
 
 @router.get("/complaints/download-excel")
 def download_complaints_excel(

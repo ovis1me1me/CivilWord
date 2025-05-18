@@ -7,6 +7,15 @@ from app.models.user_reply_history import UserReplyHistory
 from datetime import datetime, timedelta
 import random
 
+# === 비밀번호 해시 함수 추가 ===
+from passlib.context import CryptContext
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)
+
+# === 더미 데이터 ===
 questions = [
     "어머니 성함은?",
     "첫 애완동물 이름은?",
@@ -49,13 +58,13 @@ def create_dummy_data():
                 user_uid=user_uid,
                 user_id=user_id,
                 name=name,
-                password="hashed_dummy_password",
+                password=hash_password("1234"),  # 비밀번호 해시 저장
                 question=random.choice(questions),
                 answer=random.choice(answers)
             )
             db.add(user)
             db.flush()
-            
+
             user_info = UserInfo(
                 user_uid=user_uid,
                 name=name,
@@ -64,13 +73,13 @@ def create_dummy_data():
                 email=email,
             )
             db.add(user_info)
-        
+
         db.commit()
 
         # 민원 및 답변 생성 (사용자당 10개 민원)
         users = db.query(User).all()
         for user in users:
-            for i in range(10):  # 10개 민원 생성
+            for _ in range(10):  # 10개 민원 생성
                 title, content = random.choice(complaint_samples)
                 created_at = datetime.utcnow() - timedelta(days=random.randint(0, 60))
                 complaint = Complaint(
@@ -85,7 +94,7 @@ def create_dummy_data():
                 )
                 db.add(complaint)
                 db.flush()
-                
+
                 if random.choice([True, False]):
                     reply_content = f"답변: {title} 문제에 대해 처리하겠습니다."
                     reply = Reply(
