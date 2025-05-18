@@ -102,6 +102,7 @@ source venv/bin/activate</code></pre>
   <li><strong>데이터베이스 초기화 및 더미데이터 생성</strong>
     <pre><code>
       python3 reset_tables.py
+      python3 create_index.py #검색용 인덱스 생성
       python3 create_dummy.py
     </code></pre>
   </li>
