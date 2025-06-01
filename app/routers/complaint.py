@@ -165,13 +165,13 @@ def generate_reply(
         user_uid=current_user.user_uid
     )
     db.add(reply)
-    complaint.reply_status = "답변완료"
+    complaint.reply_status = "수정중"
     db.commit()
     db.refresh(reply)
 
     return reply
 
-# 답변 재생산(본인 것만) / 리플라이아이디 바뀌는 문제 있음 
+# 답변 재생산(본인 것만)
 @router.post("/complaints/{id}/generate-reply-again", response_model=ReplyBase)
 def generate_reply_again(
     id: int, 
@@ -210,7 +210,6 @@ def get_all_replies(
     replies = db.query(Reply).all()
     return replies
 
-#______________
 # 응답 수정(컴플레인 아이디로 )
 @router.put("/complaints/{complaint_id}/reply", response_model=ReplyBase)
 def update_reply(
