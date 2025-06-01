@@ -114,7 +114,7 @@ def delete_complaint(
 
     return ResponseMessage(message=f"민원 {id}번과 관련된 답변 및 요약이 모두 삭제되었습니다.")
 
-#민원응답답
+#민원응답 
 @router.post("/complaints/{id}/generate-reply", response_model=ReplyBase)
 def generate_reply(
     id: int,
@@ -177,8 +177,8 @@ def generate_reply_again(
     id: int, 
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
-    ):
-    # 해당 민원이 현재 유저의 것인지 확인
+):
+    # 민원 소유자 확인
     complaint = db.query(Complaint).filter(
         Complaint.id == id,
         Complaint.user_uid == current_user.user_uid
@@ -186,17 +186,39 @@ def generate_reply_again(
     if not complaint:
         raise HTTPException(status_code=404, detail="해당 민원을 찾을 수 없거나 권한이 없습니다.")
 
-    # 기존 답변 삭제 (있다면)
+    # 기존 답변 삭제
     existing_reply = db.query(Reply).filter(Reply.complaint_id == id).first()
     if existing_reply:
         db.delete(existing_reply)
         db.commit()
 
-    # 새 답변 직접 생성
-    new_content = f"답변 내용: {complaint.title}에 대한 답변입니다."
+    # 담당자 정보 조회
+    user_info = db.query(UserInfo).filter(UserInfo.user_uid == current_user.user_uid).first()
+    if not user_info or not (user_info.department and user_info.name and user_info.contact):
+        raise HTTPException(status_code=400, detail="담당자 정보가 등록되어 있지 않거나 필수 항목이 누락되었습니다.")
 
-    new_reply = Reply(content=new_content, complaint_id=id, user_uid=current_user.user_uid)
+    # 답변 내용 재조립
+    fixed_header = (
+        "1. 평소 구정에 관심을 가져주신데 대해 감사드립니다.\n"
+        "2. 귀하의 질의사항에 대하여 다음과 같이 답변드립니다.\n"
+    )
+    fixed_footer = (
+        f"3. 기타 궁금하신 사항은 {user_info.department}({user_info.name}, "
+        f"{user_info.contact})로 문의하여 주시면 성심껏 답변드리겠습니다. 감사합니다."
+    )
+    reply_content = f"{fixed_header}임시 답변 내용입니다.\n{fixed_footer}"
+
+    # 새 답변 저장
+    new_reply = Reply(
+        complaint_id=id,
+        content=reply_content,
+        user_uid=current_user.user_uid
+    )
     db.add(new_reply)
+
+    # 상태 갱신
+    complaint.reply_status = "수정중"
+
     db.commit()
     db.refresh(new_reply)
 
