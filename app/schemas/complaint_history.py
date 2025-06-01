@@ -4,7 +4,7 @@ from typing import Optional
 
 class ComplaintHistoryResponse(BaseModel):
     id: int
-    user_uid: str
+    user_uid: Optional[str]
     title: str
     content: str
     is_public: bool
