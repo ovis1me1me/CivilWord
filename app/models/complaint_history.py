@@ -16,7 +16,6 @@ class ComplaintHistory(Base):
     summary = Column(Text, nullable=True)
     reply_summary = Column(Text, nullable=True)
     reply_status = Column(String, default="답변전")
-    
     reply_content = Column(Text, nullable=True)  # 히스토리 답변 내용 저장용
 
     moved_at = Column(DateTime, default=datetime.utcnow) 

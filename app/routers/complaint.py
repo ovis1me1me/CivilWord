@@ -7,6 +7,7 @@ from app.schemas.reply import ReplyBase
 from app.models.complaint import Complaint
 from app.models.reply import Reply
 from app.models.user import User 
+from app.models import UserInfo 
 from app.database import SessionLocal
 from typing import List, Optional
 from app.schemas.complaint import ComplaintSummaryResponse, ReplyStatusUpdateRequest
@@ -16,7 +17,7 @@ from datetime import datetime
 from fastapi.responses import StreamingResponse
 import pandas as pd
 from sqlalchemy import text
-
+import re
 router = APIRouter()
 
 # DB 세션 의존성 주입
@@ -113,14 +114,14 @@ def delete_complaint(
 
     return ResponseMessage(message=f"민원 {id}번과 관련된 답변 및 요약이 모두 삭제되었습니다.")
 
-# 민원 응답(본인 것만) 
+#민원응답답
 @router.post("/complaints/{id}/generate-reply", response_model=ReplyBase)
 def generate_reply(
     id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)  # JWT에서 가져온 유저
+    current_user: User = Depends(get_current_user)
 ):
-    # 해당 민원이 현재 유저의 것인지 확인
+    # 민원 유효성 및 권한 확인
     complaint = db.query(Complaint).filter(
         Complaint.id == id,
         Complaint.user_uid == current_user.user_uid
@@ -128,25 +129,47 @@ def generate_reply(
 
     if not complaint:
         raise HTTPException(status_code=404, detail="해당 민원을 찾을 수 없거나 권한이 없습니다.")
-    
-    # 답변 중복 생성 방지
+
+    # 중복 답변 방지
     existing_reply = db.query(Reply).filter(Reply.complaint_id == id).first()
     if existing_reply:
         raise HTTPException(status_code=400, detail="이미 해당 민원에 대한 답변이 존재합니다.")
 
-    # 답변 생성
-    reply_content = f"답변 내용: {complaint.title}에 대한 답변입니다."
+    # 담당자 정보 조회
+    user_info = db.query(UserInfo).filter(UserInfo.user_uid == current_user.user_uid).first()
+    if not user_info:
+        raise HTTPException(status_code=400, detail="담당자 정보가 등록되어 있지 않습니다.")
 
+    if not (user_info.department and user_info.name and user_info.contact):
+        raise HTTPException(status_code=400, detail="담당자 정보(부서, 이름, 연락처)가 누락되었습니다.")
+
+    # === 답변 조립 ===
+    fixed_header = (
+        "1. 평소 구정에 관심을 가져주신데 대해 감사드립니다.\n"
+        "2. 귀하의 질의사항에 대하여 다음과 같이 답변드립니다.\n"
+    )
+
+    # generated_core = generate_llm_reply(complaint)  # LLM 연동 함수 필요
+
+    fixed_footer = (
+        f"3. 기타 궁금하신 사항은 {user_info.department}({user_info.name}, "
+        f"{user_info.contact})로 문의하여 주시면 성심껏 답변드리겠습니다. 감사합니다."
+    )
+
+    reply_content = f"{fixed_header}임시 답변 내용입니다.\n{fixed_footer}"
+
+    # DB 저장
     reply = Reply(
         complaint_id=id,
         content=reply_content,
-        user_uid=current_user.user_uid  # 작성자 기록 (선택적이지만 추천)
+        user_uid=current_user.user_uid
     )
     db.add(reply)
+    complaint.reply_status = "답변완료"
     db.commit()
     db.refresh(reply)
 
-    return reply 
+    return reply
 
 # 답변 재생산(본인 것만) / 리플라이아이디 바뀌는 문제 있음 
 @router.post("/complaints/{id}/generate-reply-again", response_model=ReplyBase)
@@ -353,39 +376,42 @@ def get_similar_histories(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # 1. 본인 민원 확인
+    # 1. 민원 본문 가져오기
     complaint = db.query(Complaint).filter(
         Complaint.id == id,
         Complaint.user_uid == current_user.user_uid
     ).first()
-
     if not complaint:
         raise HTTPException(status_code=404, detail="해당 민원이 없거나 권한이 없습니다.")
 
-    # 2. Full Text Search 질의 생성
-    query_text = " & ".join(complaint.content[:50].split())
+    # 2. 텍스트 전처리 (소문자화 + 특수문자 제거 + 토큰 제한)
+    raw_text = complaint.content[:300]
+    cleaned_text = re.sub(r"[^\w\s]", " ", raw_text)
+    tokens = cleaned_text.split()
+    query_text = " ".join(tokens[:10]).lower()
 
-    # 3. PostgreSQL 직접 실행
+    if not query_text.strip():
+        raise HTTPException(status_code=400, detail="검색어가 유효하지 않습니다.")
+
+    # 3. Full Text Search (websearch_to_tsquery 사용)
     sql = text("""
         SELECT urh.*
         FROM user_reply_history urh
-        WHERE to_tsvector('simple', final_content) @@ to_tsquery('simple', :query)
-        ORDER BY ts_rank(to_tsvector('simple', final_content), to_tsquery('simple', :query)) DESC
+        WHERE to_tsvector('simple', LOWER(final_content)) @@ websearch_to_tsquery('simple', :query)
+        ORDER BY ts_rank(to_tsvector('simple', LOWER(final_content)), websearch_to_tsquery('simple', :query)) DESC
         LIMIT 10
     """)
-    rows = db.execute(sql, {"query": query_text}).fetchall()
+    
+    try:
+        rows = db.execute(sql, {"query": query_text}).fetchall()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"FTS 실행 실패: {str(e)}")
 
     if not rows:
         raise HTTPException(status_code=404, detail="유사한 민원이 없습니다.")
 
-    # 4. 수동으로 스키마 변환 (예: ReplyBase 포함 필드 기준)
-    results = []
-    for row in rows:
-        results.append({
-            "content": row.final_content,  # ReplyBase 스키마에 맞게 변환
-        })
+    return [{"content": row.final_content} for row in rows]
 
-    return results
 
 @router.get("/complaints/download-excel")
 def download_complaints_excel(

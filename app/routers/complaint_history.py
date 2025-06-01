@@ -4,6 +4,7 @@ from app.database import get_db
 from app.models.complaint import Complaint
 from app.models.complaint_history import ComplaintHistory
 from app.schemas.complaint_history import ComplaintHistoryResponse 
+from app.schemas.reply import ReplyBase, SimpleContent
 from app.models.reply import Reply
 from app.schemas.response_message import ResponseMessage
 from app.models.user import User
@@ -11,6 +12,9 @@ from app.auth import get_current_user
 from app.models.user import User
 from fastapi import Depends
 from typing import List
+import re
+from sqlalchemy import text
+
 
 
 router = APIRouter()
@@ -87,3 +91,50 @@ def search_complaint_history_by_title(
         raise HTTPException(status_code=404, detail="검색어에 해당하는 히스토리가 없습니다.")
 
     return histories
+
+@router.get("/test/complaints/history", response_model=List[ComplaintHistoryResponse])
+def get_all_complaint_histories_for_test(
+    db: Session = Depends(get_db)
+):
+    """
+     [테스트용] 모든 유저의 민원 히스토리 전체 조회 (인증 없음)
+    실제 서비스에서는 제거 또는 관리자 인증 필요
+    """
+    histories = db.query(ComplaintHistory)\
+    .order_by(ComplaintHistory.created_at.desc())\
+    .limit(100).all()
+
+    return histories
+
+@router.get("/history/{id}/similar", response_model=list[SimpleContent])
+def get_similar_complaints_by_content(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # 1. 기준 민원 조회
+    complaint = db.query(ComplaintHistory).filter(ComplaintHistory.id == id).first()
+    if not complaint:
+        raise HTTPException(status_code=404, detail="해당 민원이 히스토리에 없습니다.")
+
+    if not complaint.content:
+        raise HTTPException(status_code=400, detail="해당 민원에 본문 내용이 없습니다.")
+
+    # 2. pg_trgm 유사도 검색 (content 기준)
+    sql = text("""
+        SELECT id, content
+        FROM complaint_history
+        WHERE similarity(content, :query) > 0.2
+        ORDER BY similarity(content, :query) DESC
+        LIMIT 10;
+    """)
+
+    try:
+        rows = db.execute(sql, {"query": complaint.content}).fetchall()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"쿼리 실행 실패: {str(e)}")
+
+    if not rows:
+        raise HTTPException(status_code=404, detail="유사한 민원이 없습니다.")
+
+    return [{"content": row.content} for row in rows]

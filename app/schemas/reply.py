@@ -9,3 +9,6 @@ class ReplyBase(BaseModel):
 
     class Config:
         orm_mode = True
+
+class SimpleContent(BaseModel):
+    content: str

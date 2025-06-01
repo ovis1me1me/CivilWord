@@ -45,21 +45,21 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")  # tokenUrl 경로 주�
 
 # 현재 로그인된 사용자 추출
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    print(f"[DEBUG] Authorization 토큰 수신됨: {token}")  # ✅ 이 줄 추가
+    print(f"[DEBUG] Authorization 토큰 수신됨: {token}") 
 
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_uid: str = payload.get("sub")
-        print(f"[DEBUG] JWT sub 값: {user_uid}")  # ✅ 이 줄 추가
+        print(f"[DEBUG] JWT sub 값: {user_uid}") 
         if user_uid is None:
             raise credentials_exception
     except JWTError as e:
-        print(f"[DEBUG] JWT 오류 발생: {e}")  # ✅ 이 줄 추가
+        print(f"[DEBUG] JWT 오류 발생: {e}") 
         raise credentials_exception
 
     user = db.query(User).filter(User.user_uid == user_uid).first()
     if user is None:
-        print(f"[DEBUG] user_uid={user_uid} 에 해당하는 유저 없음")  # ✅ 이 줄 추가
+        print(f"[DEBUG] user_uid={user_uid} 에 해당하는 유저 없음") 
         raise credentials_exception
 
     print(f"[DEBUG] 인증 성공: user_uid={user.user_uid}")
