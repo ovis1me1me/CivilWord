@@ -17,3 +17,11 @@ class ComplaintHistoryResponse(BaseModel):
 
     class Config:
         orm_mode = True
+
+class HistorySimpleContent(BaseModel):
+    title: str
+    content: str
+    reply_content: Optional[str]
+
+    class Config:
+        orm_mode = True
