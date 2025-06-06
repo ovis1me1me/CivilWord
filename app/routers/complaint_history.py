@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.complaint import Complaint
 from app.models.complaint_history import ComplaintHistory
-from app.schemas.complaint_history import ComplaintHistoryResponse 
+from app.schemas.complaint_history import ComplaintHistoryResponse,HistorySimpleContent
 from app.schemas.reply import ReplyBase, SimpleContent
 from app.models.reply import Reply
 from app.schemas.response_message import ResponseMessage
@@ -42,7 +42,6 @@ def move_complaints_to_history(
         reply_content = reply.content if reply else None
 
         history = ComplaintHistory(
-            id=complaint.id,
             user_uid=complaint.user_uid,
             title=complaint.title,
             content=complaint.content,
@@ -74,6 +73,29 @@ def get_complaint_history(
         ComplaintHistory.user_uid == current_user.user_uid
     ).all()
     return histories
+
+@router.get("/complaints/history/{id}", response_model=HistorySimpleContent)
+def get_complaint_history_by_id(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    자신의 민원 히스토리 상세 조회 (제목, 본문, 답변만 반환)
+    """
+    complaint_history = db.query(ComplaintHistory).filter(
+        ComplaintHistory.id == id,
+        ComplaintHistory.user_uid == current_user.user_uid
+    ).first()
+
+    if not complaint_history:
+        raise HTTPException(status_code=404, detail="해당 히스토리를 찾을 수 없거나 권한이 없습니다.")
+
+    return {
+        "title": complaint_history.title,
+        "content": complaint_history.content,
+        "reply_content": complaint_history.reply_content  # 정확한 필드명
+    }
 
 @router.get("/complaints/history/search", response_model=List[ComplaintHistoryResponse])
 def search_complaint_history_by_title(
