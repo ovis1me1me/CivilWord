@@ -89,6 +89,22 @@ def get_complaints(
 
     return complaints
 
+@router.get("/complaints/{id}", response_model=ComplaintResponse)
+def get_complaint_by_id(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    complaint = db.query(Complaint).filter(
+        Complaint.id == id,
+        Complaint.user_uid == current_user.user_uid
+    ).first()
+
+    if not complaint:
+        raise HTTPException(status_code=404, detail="해당 민원이 없거나 권한이 없습니다.")
+
+    return complaint
+
 @router.delete("/complaints/{id}", response_model=ResponseMessage)
 def delete_complaint(
     id: int,
