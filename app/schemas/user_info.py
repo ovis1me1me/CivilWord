@@ -5,6 +5,7 @@ class UserInfoCreate(BaseModel):
     name: str
     department: str
     contact: str
+    email: str
 
 # 유저 상세 정보 응답용
 class UserInfoResponse(BaseModel):
@@ -12,6 +13,7 @@ class UserInfoResponse(BaseModel):
     name: str
     department: str
     contact: str
+    email: str
 
     class Config:
         orm_mode = True

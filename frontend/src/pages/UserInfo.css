@@ -1,0 +1,44 @@
+.form-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 100px;
+    font-family: sans-serif;
+  }
+  
+  .title {
+    font-size: 28px;
+    font-weight: bold;
+    margin-bottom: 40px;
+  }
+  
+  .form-box {
+    display: flex;
+    flex-direction: column;
+    width: 300px;
+  }
+  
+  .form-box label {
+    margin: 10px 0 4px;
+    font-weight: 500;
+  }
+  
+  .form-box input,
+  .form-box select {
+    padding: 10px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+  }
+  
+  .form-box button {
+    margin-top: 30px;
+    padding: 12px;
+    background-color: black;
+    color: white;
+    border: none;
+    font-weight: bold;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  
