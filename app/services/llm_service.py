@@ -1,11 +1,20 @@
-import os
-from dotenv import load_dotenv
+from transformers import AutoTokenizer, AutoModelForCausalLM
+from app.schemas.input_schema import InputSchema
+BASE_PATH = "./app/models/polyglot_base"
 
-load_dotenv() # .env파일 로드
+tokenizer = None
+model = None
 
-# LLM과 연결될 핵심 서비스 로직
-# 임시로 문자열 반환
-def generate_response(prompt: str) -> str:
-    api_key = os.getenv("LLM_API_KEY", "키 없음")   # .env에 값 없으면 키 없음 출력
-    return f"[임시 응답] '{prompt}'에 대한 답변입니다.(APO KEY: {api_key})"
+def generate_text(prompt: str) -> str:
+    global tokenizer, model
 
+    if tokenizer is None or model is None:
+        tokenizer = AutoTokenizer.from_pretrained(BASE_PATH)
+        model = AutoModelForCausalLM.from_pretrained(BASE_PATH)
+
+    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+    outputs = model.generate(**inputs, max_new_tokens=256)
+    return tokenizer.decode(outputs[0], skip_special_tokens=True)
+
+def generate_answer(input):
+    return generate_text(input.content)

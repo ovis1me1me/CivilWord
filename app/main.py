@@ -1,28 +1,54 @@
 from fastapi import FastAPI
-from app.routers import ask
-from app.services.llm_service import generate_response
+from fastapi.middleware.cors import CORSMiddleware
+from app.database import engine, Base
+from app.routers import complaint_history, complaint, user_info, login, register, user_history, user
+from app.services.llm_service import generate_answer, InputSchema
 from pydantic import BaseModel
 
-app = FastAPI() # FastAPI 앱 생성
-app.include_router(ask.router)	# ask 라우터 등록
 
 
-#   1. Pydantic 모델 정의
-#   요청 스키마
-class MessageRequest(BaseModel):
-    message: str    #반드시 포함되어야 하는 필드
+app = FastAPI()
 
-#   응답 스키마
-class MessageResponse(BaseModel):
-    you_sent: str
+# LLM용 Pydantic 모델 정의
+class Complaint(BaseModel):
+    content: str
 
+# CORS 설정
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://127.0.0.1:5173"],  # 프론트 도메인으로 변경 가능
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# 테스트용 핸들러
+# DB 테이블 생성
+Base.metadata.create_all(bind=engine)
+
+# 라우터 등록
+app.include_router(complaint.router)
+app.include_router(user_info.router)
+app.include_router(login.router)
+app.include_router(register.router)
+app.include_router(user_history.router)
+app.include_router(user.router)
+app.include_router(complaint_history.router)
+
+# 루트 엔드포인트
 @app.get("/")
 def root():
-	return {"message": "새올 민원자동응답 시스템입니다."}
+    return {"message": "DB 및 백엔드 정상 작동 중.."}
 
-@app.post("/echo", response_model=MessageResponse)
-def echo_message(data: MessageRequest):
-    answer = generate_response(data.message)
-    return {"you_sent": answer}
+# 인증된 사용자 정보 테스트 (선택)
+from fastapi import Depends
+from app.auth import get_current_user
+
+@app.get("/me")
+def get_me(current_user: dict = Depends(get_current_user)):
+    return {"user_uid": current_user["sub"]}
+
+# LLM 답변 생성 API 등록
+@app.post("/generate_answer")
+def handle_complaint(complaint: Complaint):
+    response = generate_answer(InputSchema(content=complaint.content))
+    return {"answer": response}
