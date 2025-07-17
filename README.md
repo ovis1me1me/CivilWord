@@ -92,10 +92,12 @@ source venv/bin/activate</code></pre>
       <strong>데이터베이스 삭제 및 재생성 (선택 사항)</strong>
   
   <pre><code>
-  sudo -i -u postgres psql
+  sudo -i -u postgres
+  psql
   DROP DATABASE IF EXISTS civildb;
   CREATE DATABASE civildb OWNER civiluser;
   \q
+  exit
   </code></pre> 
   </li>
   
@@ -114,6 +116,7 @@ source venv/bin/activate</code></pre>
   <li><strong>Swagger UI 접속</strong> (브라우저에서 테스트 가능)<br/>
     👉 <a href="http://127.0.0.1:8000/docs" target="_blank">http://127.0.0.1:8000/docs</a>
     👉 우측 상단 Authorize에서 로그인 가능
+    👉 id: user01 pw: 1234
   </li>
 </ol>
 
