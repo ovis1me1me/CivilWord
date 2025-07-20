@@ -11,7 +11,7 @@ export default function AnswerTextarea({
 }: Props) {
   return (
     <div className="mb-6">
-      <h3 className="text-xl font-semibold text-black mb-2">3) 답변 요지</h3>
+      <h3 className="text-xl font-semibold text-black mb-2">답변 요지</h3>
       <textarea
         value={answerSummary}
         onChange={(e) => setAnswerSummary(e.target.value)}

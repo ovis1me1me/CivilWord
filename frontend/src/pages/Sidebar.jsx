@@ -43,7 +43,7 @@ const Sidebar = () => {
 
   return (
     <div className="sidebar">
-      <div className="sidebar-title">Civil Word</div>
+      <div className="sidebar-title"><a href="/upload_excel">Civil Word</a></div>
 
       <div className="sidebar-section">
         <div className="sidebar-label-with-edit">
@@ -67,7 +67,7 @@ const Sidebar = () => {
             </Link>
           </li>
           <li>
-            <Link to="/history">
+            <Link to="/complaints/history">
               <img src={history} alt="히스토리 아이콘" /> 히스토리
             </Link>
           </li>

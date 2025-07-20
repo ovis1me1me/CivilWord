@@ -18,7 +18,7 @@ export default function ComplaintList({
   onTitleClick,
 }: Props) {
   return (
-    <div className="mt-4">
+    <div className="mt-4 ml-[250px] p-4"> {/* 사이드 바 고려하여 중앙 위치*/}
       {/* Header */}
       <div className="flex items-center bg-gray-100 p-2 rounded mb-2">
         <input

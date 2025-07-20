@@ -10,10 +10,10 @@ export default function Header({ complaintId, title }: Props) {
 
   return (
     <div className="flex justify-between items-center mb-4 w-[997px] mx-auto">
-      <div className="w-56 text-black text-xl font-semibold">{complaintId}. {title}</div>
+      <div className="w-4/6 text-black text-xl font-semibold">{complaintId}. {title}</div>
       <button
         onClick={() => navigate('/complaints')}
-        className="bg-black text-white px-4 py-2 rounded-lg"
+        className="w-1/6 bg-black text-white px-2 py-1 rounded-lg"
       >
         목록으로
       </button>

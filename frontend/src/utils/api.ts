@@ -59,6 +59,10 @@ export const downloadSelectedComplaints = (ids: number[]) =>
     responseType: 'blob', // 👉 파일 다운로드는 blob
   });
 
+/** ✅ 민원 상세 조회 ------------------------------------------------------- 7/21 추가 */
+export const fetchComplaintDetail = (id: number) =>
+  instance.get(`/complaints/${id}`);
+
 /** ✅ 5️. 민원 답변 생성 */
 export const generateReply = (id: number, answerSummary: string) =>
   instance.post(`/complaints/${id}/generate-reply`, { answerSummary });
