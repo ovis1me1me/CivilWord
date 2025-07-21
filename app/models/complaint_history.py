@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import JSONB
 from datetime import datetime
 from app.database import Base
 
@@ -14,8 +15,8 @@ class ComplaintHistory(Base):
     is_public = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     summary = Column(Text, nullable=True)
-    reply_summary = Column(Text, nullable=True)
+    reply_summary = Column(JSONB, nullable=True)  #  JSONB로 변경
+    reply_content = Column(JSONB, nullable=True)  #  JSONB로 변경
     reply_status = Column(String, default="답변전")
-    reply_content = Column(Text, nullable=True)  # 히스토리 답변 내용 저장용
 
     moved_at = Column(DateTime, default=datetime.utcnow) 
