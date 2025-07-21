@@ -98,6 +98,7 @@ source venv/bin/activate</code></pre>
   CREATE DATABASE civildb OWNER civiluser;
   \q
   exit
+
   </code></pre> 
   </li>
   

@@ -2,7 +2,8 @@ import pandas as pd
 import io 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
 from sqlalchemy.orm import Session
-from app.schemas.complaint import ComplaintCreate, ComplaintResponse
+# 7/21 ComplaintResponse, ComplaintCreate 추가
+from app.schemas.complaint import ComplaintListResponse, FullReplySummaryResponse, ReplySummaryUpdateRequest, ComplaintResponse, ComplaintCreate
 from app.schemas.reply import ReplyBase
 from app.models.complaint import Complaint
 from app.models.reply import Reply
@@ -72,7 +73,8 @@ async def upload_complaints_excel(
     return ResponseMessage(message=f"{len(df)}건의 민원이 등록되었습니다.")
 
 
-@router.get("/complaints", response_model=List[ComplaintResponse])
+@router.get("/complaints", response_model=ComplaintListResponse) #수정함
+
 def get_complaints(
     db: Session = Depends(get_db), 
     sort: Optional[str] = None,
@@ -82,13 +84,21 @@ def get_complaints(
 ):
     query = db.query(Complaint).filter(Complaint.user_uid == current_user.user_uid)
 
+    total = query.count() 
+
     if sort == "created":
         complaints = query.order_by(Complaint.created_at.desc()).offset(skip).limit(limit).all()
+
+
     else:
         complaints = query.offset(skip).limit(limit).all()
 
-    return complaints
+    return {
+        "total": total,          # ✅ 전체 개수 포함
+        "complaints": complaints
+    }
 
+# 7/21 추가
 @router.get("/complaints/{id}", response_model=ComplaintResponse)
 def get_complaint_by_id(
     id: int,
@@ -330,6 +340,7 @@ def get_complaint_summary(
     
 
 @router.get("/complaints/{id}/reply-summary", response_model=ComplaintSummaryResponse)
+
 def get_reply_summary(
     id: int,
     db: Session = Depends(get_db),
@@ -347,12 +358,21 @@ def get_reply_summary(
         raise HTTPException(status_code=404, detail="요약이 아직 저장되지 않았습니다.")
 
     return ComplaintSummaryResponse(summary=complaint.reply_summary)
+    replies = db.query(Reply).filter_by(complaint_id=id).all()
 
+    # return ComplaintSummaryResponse(summary=complaint.reply_summary)
+
+    return FullReplySummaryResponse(
+        summary=complaint.reply_summary or "",
+        selected_reply=complaint.selected_reply or "",
+        generated_replies=[r.content for r in replies]
+    )
 
 @router.put("/complaints/{id}/reply-summary", response_model=ResponseMessage)
 def update_reply_summary(
     id: int,
     summary: str,
+    data: ReplySummaryUpdateRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -366,7 +386,7 @@ def update_reply_summary(
         raise HTTPException(status_code=404, detail="해당 민원이 없거나 권한이 없습니다.")
 
     # 요약 저장 (수정)
-    complaint.reply_summary = summary
+    complaint.reply_summary = data.summary
     db.commit()
     db.refresh(complaint)
 

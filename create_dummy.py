@@ -53,7 +53,8 @@ def create_dummy_data():
     try:
         # 사용자 및 상세정보 생성
         for idx, (user_id, name, email, contact, dept) in enumerate(users_data):
-            user_uid = f"dummy-uuid-{idx+1:04d}"
+
+            user_uid = testid
             user = User(
                 user_uid=user_uid,
                 user_id=user_id,

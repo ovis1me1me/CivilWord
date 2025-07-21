@@ -16,7 +16,7 @@ class Complaint(BaseModel):
 # CORS 설정
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 프론트 도메인으로 변경 가능
+    allow_origins=["http://127.0.0.1:5173"],  # 프론트 도메인으로 변경 가능
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
