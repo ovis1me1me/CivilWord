@@ -346,8 +346,7 @@ def get_complaint_summary(
     
 
 @router.get("/complaints/{id}/reply-summary", response_model=ComplaintSummaryResponse)
-
-def get_reply_summary(
+def get_complaint_summary(
     id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -368,7 +367,6 @@ def get_reply_summary(
         content=complaint.content,
         summary=complaint.reply_summary
     )
-
 
 @router.put("/complaints/{id}/reply-summary", response_model=ResponseMessage)
 def update_reply_summary(
