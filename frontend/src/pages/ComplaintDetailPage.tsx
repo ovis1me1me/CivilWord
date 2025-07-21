@@ -9,15 +9,13 @@ import { ComplaintDetail } from '../types/complaint';
 import {
   fetchComplaintDetail,
   fetchComplaintSummary,
-} from '../utils/api'; // ✅ fetchReplySummary 제거됨
+} from '../utils/api';
 
 export default function ComplaintDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
   const [complaint, setComplaint] = useState<ComplaintDetail | null>(null);
-  const [summaries, setSummaries] = useState<string[]>([]);
-  const [answerOptions, setAnswerOptions] = useState<Record<number, string[]>>({});
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -32,14 +30,17 @@ export default function ComplaintDetailPage() {
   const answerContainerRef = useRef<HTMLDivElement>(null);
   const [answerHeight, setAnswerHeight] = useState(0);
 
-  // ✅ 데이터 불러오기
+  // 민원 요지 + 답변 요지
+  const [answerBlocks, setAnswerBlocks] = useState([
+    { summaryTitle: '', answerOptions: [''] },
+  ]);
+
   useEffect(() => {
     const fetchData = async () => {
       if (!id) return;
       try {
         const numericId = parseInt(id, 10);
 
-        // ✅ complaint + 요지만 호출
         const [complaintRes, summaryRes] = await Promise.all([
           fetchComplaintDetail(numericId),
           fetchComplaintSummary(numericId),
@@ -57,8 +58,7 @@ export default function ComplaintDetailPage() {
           answerSummary: replySummary,
         });
 
-        setSummaries([replySummary]);
-        setAnswerOptions({ 0: ['', '', ''] });
+        setAnswerBlocks([{ summaryTitle: replySummary, answerOptions: ['', '', ''] }]);
       } catch (err) {
         console.error('민원 상세 조회 실패:', err);
       } finally {
@@ -73,42 +73,78 @@ export default function ComplaintDetailPage() {
     if (answerContainerRef.current) {
       setAnswerHeight(answerContainerRef.current.offsetHeight);
     }
-  }, [summaries]);
+  }, [answerBlocks]);
 
+  // 민원 요약 입력
   const handleSummaryChange = (index: number, value: string) => {
-    const updated = [...summaries];
-    updated[index] = value;
-    setSummaries(updated);
+    setAnswerBlocks(prev =>
+      prev.map((block, i) =>
+        i === index ? { ...block, summaryTitle: value } : block
+      )
+    );
   };
 
+  // 답변 추가
   const handleAddSummary = () => {
-    const nextIndex = summaries.length;
-    setSummaries([...summaries, '']);
-    setAnswerOptions({ ...answerOptions, [nextIndex]: ['', '', ''] });
+    setAnswerBlocks(prev => [
+      ...prev,
+      { summaryTitle: '', answerOptions: ['','',''] },
+    ]);
   };
 
+  // 답변 요지 추가
   const handleAddAnswerOption = (index: number) => {
-    const updated = [...(answerOptions[index] || []), ''];
-    setAnswerOptions({ ...answerOptions, [index]: updated });
+    setAnswerBlocks(prev =>
+      prev.map((block, i) =>
+        i === index
+          ? { ...block, answerOptions: [...block.answerOptions, ''] }
+          : block
+      )
+    );
   };
 
+  // 답변 요지 삭제
   const handleDeleteAnswerOption = (summaryIndex: number, answerIndex: number) => {
-    const updated = [...(answerOptions[summaryIndex] || [])];
-    updated.splice(answerIndex, 1);
-    setAnswerOptions({ ...answerOptions, [summaryIndex]: updated });
+    setAnswerBlocks(prev =>
+      prev.map((block, i) =>
+        i === summaryIndex
+          ? {
+              ...block,
+              answerOptions: block.answerOptions.filter(
+                (_, idx) => idx !== answerIndex
+              ),
+            }
+          : block
+      )
+    );
   };
 
-  const handleAnswerOptionChange = (summaryIndex: number, answerIndex: number, value: string) => {
-    const updated = [...(answerOptions[summaryIndex] || [])];
-    updated[answerIndex] = value;
-    setAnswerOptions({ ...answerOptions, [summaryIndex]: updated });
+  // 답변 요지 입력
+  const handleAnswerOptionChange = (
+    summaryIndex: number,
+    answerIndex: number,
+    value: string
+  ) => {
+    setAnswerBlocks(prev =>
+      prev.map((block, i) =>
+        i === summaryIndex
+          ? {
+              ...block,
+              answerOptions: block.answerOptions.map((option, idx) =>
+                idx === answerIndex ? value : option
+              ),
+            }
+          : block
+      )
+    );
   };
 
+    // 답변 생성
   const handleGenerateAnswer = () => {
     setIsGenerating(true);
     setTimeout(() => {
       navigate(`/complaints/${id}/select-answer`, {
-        state: { summaries },
+        state: { summaries: answerBlocks.map(block => block.summaryTitle) },
       });
     }, 2000);
   };
@@ -132,11 +168,13 @@ export default function ComplaintDetailPage() {
           />
 
           <div ref={answerContainerRef} className="flex flex-col gap-6">
-            {summaries.map((_, index) => (
+            {answerBlocks.map((block, index) => (
               <AnswerBlock
                 key={index}
                 index={index}
-                answerOptions={answerOptions[index] || []}
+                summaryTitle={block.summaryTitle}
+                answerOptions={block.answerOptions}
+                onSummaryChange={(value) => handleSummaryChange(index, value)}
                 onAddAnswer={() => handleAddAnswerOption(index)}
                 onDeleteAnswer={(answerIndex) =>
                   handleDeleteAnswerOption(index, answerIndex)

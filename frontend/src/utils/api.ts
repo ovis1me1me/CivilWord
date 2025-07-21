@@ -75,11 +75,11 @@ export const regenerateReply = (id: number) =>
 export const fetchReplies = (id: number) =>
   instance.get(`/complaints/${id}/replies`);
 
-/** ✅ 8️. 민원 상세 내용 요약 조회 */
+/** ✅ 8️. 민원 요약 조회 */
 export const fetchComplaintSummary = (id: number) =>
   instance.get(`/complaints/${id}/summary`);
 
-/** ✅ 9️. 민원 요지 조회 */
+/** ✅ 9️. 답변 요지 조회 */
 export const fetchReplySummary = (id: number) =>
   instance.get(`/complaints/${id}/reply-summary`);
 
