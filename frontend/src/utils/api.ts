@@ -35,6 +35,12 @@ export const loginUser = (username: string, password: string) =>
 /** ✅ 현재 로그인된 사용자 정보 조회 */
 export const fetchUserInfo = () => instance.get('/user-info');
 
+/** ✅ 사용자 정보 수정 */
+export const updateUserInfo = async (data) => {
+  const response = await instance.put('/user-info', data);
+  return response.data;
+};
+
 /** ✅ 1️. 엑셀로 민원 업로드 */
 export const uploadExcelFile = (file: File) => {
   const formData = new FormData();

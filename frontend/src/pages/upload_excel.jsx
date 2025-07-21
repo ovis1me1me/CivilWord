@@ -2,41 +2,53 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './upload_excel.css';
 import { file } from '../assets/icons';
-import Spinner from '../component/Shared/Spinner'; 
-
+import Spinner from '../component/Shared/Spinner';
+import { uploadExcelFile } from '../utils/api';
 
 function UploadExcel() {
   const [fileName, setFileName] = useState('');
+  const [fileObj, setFileObj] = useState(null);
+  const [isGenerating, setIsGenerating] = useState(false);
   const navigate = useNavigate();
 
   const handleFileChange = (e) => {
-    if (e.target.files[0]) {
-      setFileName(e.target.files[0].name);
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      setFileName(selectedFile.name);
+      setFileObj(selectedFile);
     }
   };
-  const [isGenerating, setIsGenerating] = useState(false);
 
-  const handleSubmit = () => {
-    // 여기에 파일 업로드 처리나 검증 로직이 들어갈 수 있음
-    if (!fileName) {
+  const handleSubmit = async () => {
+    if (!fileObj) {
       alert('파일을 선택해주세요.');
       return;
     }
-      setIsGenerating(true);
-    setTimeout(() => {
-      navigate('/complaints');
-    }, 2000);
- // complaints 페이지로 이동
-  };
 
+    try {
+      setIsGenerating(true);
+      const response = await uploadExcelFile(fileObj); // ✅ axios 함수 호출
+      alert(response.data.message);
+      navigate('/complaints');
+    } catch (error) {
+      const errorMessage =
+        error.response?.data?.detail || '업로드 중 오류가 발생했습니다.';
+      alert(`업로드 실패: ${errorMessage}`);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   return (
     <div className="upload_excel-page-wrapper">
       <div className="excel-container">
-        <h2 className="title">엑셀 파일 양식을 다운로드 후 양식에 맞게 작성하여 아래 박스에 업로드 해주세요.</h2>
-        
+        <h2 className="title">
+          엑셀 파일 양식을 다운로드 후 양식에 맞게 작성하여 아래 박스에 업로드 해주세요.
+        </h2>
+
         <a className="example-link" href="/excel-template.xlsx" download>
-          <img src={file} alt="파일 아이콘" /><span> Excel 양식.xlsx</span>
+          <img src={file} alt="파일 아이콘" />
+          <span> Excel 양식.xlsx</span>
         </a>
 
         <div className="upload-box">
@@ -52,13 +64,14 @@ function UploadExcel() {
           />
           {fileName && <span className="file-name">{fileName}</span>}
         </div>
+
         <div className="button-wrapper">
           <button
             onClick={handleSubmit}
             disabled={isGenerating}
             className={`generate-button ${isGenerating ? 'disabled' : ''}`}
           >
-            {isGenerating ? '생성 중' : '생성하기'}
+            {isGenerating ? '업로드 중' : '생성하기'}
             {isGenerating && <Spinner />}
           </button>
         </div>

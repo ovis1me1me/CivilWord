@@ -19,7 +19,7 @@ from fastapi.responses import StreamingResponse
 import pandas as pd
 from sqlalchemy import text
 import re
-from bllossom8b_infer.inference import generate_llm_reply  # 함수 임포트
+# from bllossom8b_infer.inference import generate_llm_reply  # 함수 임포트
 router = APIRouter()
 
 # DB 세션 의존성 주입

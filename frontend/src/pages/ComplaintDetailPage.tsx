@@ -19,6 +19,7 @@ export default function ComplaintDetailPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  // 더미
   const [similarAnswersList, setSimilarAnswersList] = useState<string[][][]>([
     [
       ['도로 정비 요청 완료', '이관 완료', '유사 민원 답변'],
@@ -139,7 +140,7 @@ export default function ComplaintDetailPage() {
     );
   };
 
-    // 답변 생성
+  // 답변 생성
   const handleGenerateAnswer = () => {
     setIsGenerating(true);
     setTimeout(() => {
