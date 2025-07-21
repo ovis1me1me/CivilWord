@@ -1,3 +1,4 @@
+from sqlalchemy import create_engine
 from app.database import Base, engine, SessionLocal
 from app.models.user import User
 from app.models.user_info import UserInfo
@@ -48,18 +49,18 @@ complaint_samples = [
 ]
 
 def create_dummy_data():
+    Base.metadata.drop_all(bind=engine)  # ⚠ 필요 시 전체 초기화
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
-        # 사용자 및 상세정보 생성
         for idx, (user_id, name, email, contact, dept) in enumerate(users_data):
+            user_uid = f"test-uid-{idx + 1}"  # 유니크한 UID 생성
 
-            user_uid = testid
             user = User(
                 user_uid=user_uid,
                 user_id=user_id,
                 name=name,
-                password=hash_password("1234"),  # 비밀번호 해시 저장
+                password=hash_password("1234"),
                 question=random.choice(questions),
                 answer=random.choice(answers)
             )
@@ -77,10 +78,10 @@ def create_dummy_data():
 
         db.commit()
 
-        # 민원 및 답변 생성 (사용자당 10개 민원)
+        # 민원 및 답변 생성
         users = db.query(User).all()
         for user in users:
-            for _ in range(10):  # 10개 민원 생성
+            for _ in range(10):
                 title, content = random.choice(complaint_samples)
                 created_at = datetime.utcnow() - timedelta(days=random.randint(0, 60))
                 complaint = Complaint(
@@ -90,17 +91,16 @@ def create_dummy_data():
                     is_public=random.choice([True, False]),
                     created_at=created_at,
                     summary=content[:50] + "...",
-                    reply_summary=None,
+                    reply_summary=None,  # ✅ 요약 비움
                     reply_status="답변전",
                 )
                 db.add(complaint)
                 db.flush()
 
                 if random.choice([True, False]):
-                    reply_content = f"답변: {title} 문제에 대해 처리하겠습니다."
                     reply = Reply(
                         complaint_id=complaint.id,
-                        content=reply_content,
+                        content={},  # ✅ 빈 JSON
                         user_uid=user.user_uid,
                         created_at=created_at + timedelta(hours=1)
                     )
@@ -110,13 +110,13 @@ def create_dummy_data():
                         history = UserReplyHistory(
                             user_uid=user.user_uid,
                             reply=reply,
-                            final_content=reply_content,
+                            final_content={},  # ✅ 빈 JSON
                             used_at=created_at + timedelta(hours=2)
                         )
                         db.add(history)
 
         db.commit()
-        print("더미 데이터 생성 완료")
+        print("✔ 더미 데이터 생성 완료")
     finally:
         db.close()
 

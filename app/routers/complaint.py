@@ -20,6 +20,7 @@ import pandas as pd
 from sqlalchemy import text
 import re
 from bllossom8b_infer.inference import generate_llm_reply  # 함수 임포트
+from typing import Any
 router = APIRouter()
 
 # DB 세션 의존성 주입
@@ -233,7 +234,11 @@ def generate_reply_again(
         f"{user_info.contact})로 문의하여 주시면 성심껏 답변드리겠습니다. 감사합니다."
     )
     generated_core = generate_llm_reply(complaint.reply_summary)
-    reply_content = f"{fixed_header}{generated_core}\n{fixed_footer}"
+    reply_content = {
+        "header": fixed_header,
+        "body": generated_core,
+        "footer": fixed_footer
+    }
 
     # 새 답변 저장
     new_reply = Reply(
@@ -263,7 +268,7 @@ def get_all_replies(
 @router.put("/complaints/{complaint_id}/reply", response_model=ReplyBase)
 def update_reply(
     complaint_id: int,
-    content: str,
+    content: Any,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -358,21 +363,16 @@ def get_reply_summary(
     if not complaint.reply_summary:
         raise HTTPException(status_code=404, detail="요약이 아직 저장되지 않았습니다.")
 
-    return ComplaintSummaryResponse(summary=complaint.reply_summary)
-    replies = db.query(Reply).filter_by(complaint_id=id).all()
-
-    # return ComplaintSummaryResponse(summary=complaint.reply_summary)
-
-    return FullReplySummaryResponse(
-        summary=complaint.reply_summary or "",
-        selected_reply=complaint.selected_reply or "",
-        generated_replies=[r.content for r in replies]
+    return ComplaintSummaryResponse(
+        title=complaint.title,
+        content=complaint.content,
+        summary=complaint.reply_summary
     )
+
 
 @router.put("/complaints/{id}/reply-summary", response_model=ResponseMessage)
 def update_reply_summary(
     id: int,
-    summary: str,
     data: ReplySummaryUpdateRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)

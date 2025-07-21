@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Any
 
 class ComplaintHistoryResponse(BaseModel):
     id: int
@@ -10,9 +10,9 @@ class ComplaintHistoryResponse(BaseModel):
     is_public: bool
     created_at: datetime
     summary: Optional[str]         
-    reply_summary: Optional[str] 
+    reply_summary: Optional[Any] 
     reply_status: str
-    reply_content: Optional[str] 
+    reply_content: Optional[Any] 
     moved_at: Optional[datetime] = None
 
     class Config:
@@ -21,7 +21,7 @@ class ComplaintHistoryResponse(BaseModel):
 class HistorySimpleContent(BaseModel):
     title: str
     content: str
-    reply_content: Optional[str]
+    reply_content: Optional[Any]
 
     class Config:
         orm_mode = True
