@@ -60,4 +60,4 @@ accelerate==1.6.0
 peft==0.15.2
 python-multipart
 xlsxwriter==3.2.0
-
+requests
