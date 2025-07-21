@@ -42,7 +42,6 @@ def move_complaints_to_history(
         reply_content = reply.content if reply else None
 
         history = ComplaintHistory(
-            id=complaint.id,
             user_uid=complaint.user_uid,
             title=complaint.title,
             content=complaint.content,
