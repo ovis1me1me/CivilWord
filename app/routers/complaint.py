@@ -38,51 +38,50 @@ def get_db():
     finally:
         db.close()
 
-# 민원 업로드
+# ✅ 1. 엑셀 업로드 라우터 (동적 URL보다 먼저 등록)
 @router.post("/complaints/upload-excel", response_model=ResponseMessage)
 async def upload_complaints_excel(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_user: str = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
-    user_uid = current_user.user_uid  # JWT sub 사용
+    user_uid = current_user.user_uid  # 또는 current_user["sub"] 타입에 따라
 
     contents = await file.read()
-    df = pd.read_excel(io.BytesIO(contents))
+    try:
+        df = pd.read_excel(io.BytesIO(contents), engine="openpyxl")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"엑셀 파일 읽기 오류: {str(e)}")
 
     required_columns = {"제목", "민원내용", "민원 공개 여부"}
     if not required_columns.issubset(df.columns):
         raise HTTPException(status_code=400, detail=f"다음 컬럼이 포함되어야 합니다: {required_columns}")
 
     for _, row in df.iterrows():
-        is_public_str = str(row["민원 공개 여부"]).strip()
-
-        if is_public_str == "공개":
+        공개여부 = str(row["민원 공개 여부"]).strip()
+        if 공개여부 == "공개":
             is_public = True
-        elif is_public_str == "비공개":
+        elif 공개여부 == "비공개":
             is_public = False
         else:
             raise HTTPException(
                 status_code=400,
-                detail=f"민원 공개 여부는 '공개' 또는 '비공개'만 허용됩니다. (입력값: {is_public_str})"
+                detail=f"민원 공개 여부는 '공개' 또는 '비공개'만 허용됩니다. (입력값: {공개여부})"
             )
-
 
         complaint = Complaint(
             user_uid=user_uid,
             title=row["제목"],
             content=row["민원내용"],
             is_public=is_public,
-            created_at=datetime.utcnow()
+            created_at=datetime.utcnow(),
+            reply_summary={} 
         )
         db.add(complaint)
-
 
     db.commit()
     return ResponseMessage(message=f"{len(df)}건의 민원이 등록되었습니다.")
 
-
-# ✅ 먼저 선언: 엑셀 다운로드 (경로 충돌 방지)
 @router.get("/complaints/download-excel")
 def download_complaints_excel(
     ids: str,
