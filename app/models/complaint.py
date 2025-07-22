@@ -15,7 +15,8 @@ class Complaint(Base):
     is_public = Column(Boolean, default=False)   # 공개 여부
     created_at = Column(DateTime, default=datetime.utcnow)
     summary = Column(Text, nullable=True)   # 민원 요지
-    reply_summary = Column(JSONB, nullable=True)  # 답변 요지
+    reply_summary = Column(Text, nullable=True)
+
     reply_status = Column(String, default="답변전") 
     
     replies = relationship("Reply", back_populates="complaint")

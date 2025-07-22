@@ -8,6 +8,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from app.database import get_db
 from sqlalchemy.orm import Session
 from app.models.user import User
+from jose import JWTError, jwt  
 
 
 
