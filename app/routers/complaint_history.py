@@ -122,6 +122,7 @@ def move_complaints_to_history(
         history = ComplaintHistory(
             user_uid=complaint.user_uid,
             title=complaint.title,
+            summary=complaint.summary,
             content=complaint.content,
             is_public=complaint.is_public,
             created_at=complaint.created_at,
