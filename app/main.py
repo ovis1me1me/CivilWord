@@ -29,13 +29,13 @@ app.add_middleware(
 Base.metadata.create_all(bind=engine)
 
 # 라우터 등록
+app.include_router(complaint_history.router)
 app.include_router(complaint.router)
 app.include_router(user_info.router)
 app.include_router(login.router)
 app.include_router(register.router)
 app.include_router(user_history.router)
 app.include_router(user.router)
-app.include_router(complaint_history.router)
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
