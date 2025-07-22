@@ -1,6 +1,6 @@
 import pandas as pd
 import io 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request, Body
 from sqlalchemy import Column, Integer, JSON  # 또는 JSONB (PostgreSQL)
 # 7/21 ComplaintResponse, ComplaintCreate 추가
 from app.schemas.complaint import ComplaintListResponse, FullReplySummaryResponse, ReplySummaryUpdateRequest, ComplaintResponse, ComplaintCreate
@@ -81,6 +81,50 @@ async def upload_complaints_excel(
     db.commit()
     return ResponseMessage(message=f"{len(df)}건의 민원이 등록되었습니다.")
 
+
+# ✅ 먼저 선언: 엑셀 다운로드 (경로 충돌 방지)
+@router.get("/complaints/download-excel")
+def download_complaints_excel(
+    ids: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    id_list = [int(i) for i in ids.split(",") if i.isdigit()]
+
+    if not id_list:
+        raise HTTPException(status_code=400, detail="유효한 민원 ID 목록을 전달해주세요.")
+
+    complaints = db.query(Complaint).filter(
+        Complaint.user_uid == current_user.user_uid,
+        Complaint.id.in_(id_list)
+    ).all()
+
+    if not complaints:
+        raise HTTPException(status_code=404, detail="조회된 민원이 없습니다.")
+
+    rows = []
+    for complaint in complaints:
+        reply = db.query(Reply).filter(Reply.complaint_id == complaint.id).first()
+        rows.append({
+            "제목": complaint.title,
+            "내용": complaint.content,
+            "등록일": complaint.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            "공개 여부": "공개" if complaint.is_public else "비공개",
+            "답변": reply.content if reply else "(답변 없음)"
+        })
+
+    df = pd.DataFrame(rows)
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name='민원내역')
+
+    output.seek(0)
+
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=complaints.xlsx"}
+    )
 
 @router.get("/complaints", response_model=ComplaintListResponse) #수정함
 
@@ -485,55 +529,6 @@ def get_similar_histories(
         raise HTTPException(status_code=404, detail="유사한 민원이 없습니다.")
 
     return [{"content": row.final_content} for row in rows]
-
-
-@router.get("/complaints/download-excel")
-def download_complaints_excel(
-    ids: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    # 1. ID 파싱
-    id_list = [int(i) for i in ids.split(",") if i.isdigit()]
-
-    if not id_list:
-        raise HTTPException(status_code=400, detail="유효한 민원 ID 목록을 전달해주세요.")
-
-    # 2. 본인 소유 민원 + 답변 조회
-    complaints = db.query(Complaint).filter(
-        Complaint.user_uid == current_user.user_uid,
-        Complaint.id.in_(id_list)
-    ).all()
-
-    if not complaints:
-        raise HTTPException(status_code=404, detail="조회된 민원이 없습니다.")
-
-    rows = []
-    for complaint in complaints:
-        reply = db.query(Reply).filter(Reply.complaint_id == complaint.id).first()
-        rows.append({
-
-            "제목": complaint.title,
-            "내용": complaint.content,
-            "등록일": complaint.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-            "공개 여부": "공개" if complaint.is_public else "비공개",
-            "답변": reply.content if reply else "(답변 없음)"
-        })
-
-    # 3. DataFrame → 엑셀 변환
-    df = pd.DataFrame(rows)
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        df.to_excel(writer, index=False, sheet_name='민원내역')
-
-    output.seek(0)
-
-    # 4. 응답 반환
-    return StreamingResponse(
-        output,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": "attachment; filename=complaints.xlsx"}
-    )
 
 
 @router.put("/complaints/{id}/reply-status", response_model=ResponseMessage)
