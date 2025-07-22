@@ -103,7 +103,7 @@ def get_complaints(
         complaints = query.offset(skip).limit(limit).all()
 
     return {
-        "total": total,          # ✅ 전체 개수 포함
+        "total": total,          #  전체 개수 포함
         "complaints": complaints
     }
 
@@ -343,7 +343,7 @@ def get_complaint_summary(
     if not complaint:
         raise HTTPException(status_code=404, detail="해당 민원이 없거나 권한이 없습니다.")
 
-    # ✅ 요약이 없을 때만 생성
+    # 요약이 없을 때만 생성
     if not complaint.summary:
         complaint_summary = summarize_with_blossom(complaint.content)
         complaint.summary = complaint_summary
