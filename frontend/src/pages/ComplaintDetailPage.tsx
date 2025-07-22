@@ -10,6 +10,7 @@ import {
   fetchComplaintDetail,
   fetchComplaintSummary,
   saveReplySummary,
+  generateReply,
 } from '../utils/api';
 
 export default function ComplaintDetailPage() {
@@ -175,7 +176,12 @@ export default function ComplaintDetailPage() {
       };
 
       console.log('보내는 payload:', JSON.stringify(payload, null, 2));
+      // 답변 요지 저장
       await saveReplySummary(numericId, payload);
+
+      // 2) 답변 1회 생성 API 호출 (JWT 인증 필요)
+      const replyResponse = await generateReply(numericId, payload);
+      console.log('생성된 답변:', replyResponse.data);
 
       navigate(`/complaints/${id}/select-answer`, {
         state: { summaries: answerBlocks.map(block => block.summaryTitle) },

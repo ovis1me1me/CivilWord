@@ -70,7 +70,7 @@ export const fetchComplaintDetail = (id: number) =>
   instance.get(`/complaints/${id}`);
 
 /** ✅ 5️. 민원 답변 생성 */
-export const generateReply = (id: number, answerSummary: string) =>
+export const generateReply = (id: number, answerSummary: object) =>
   instance.post(`/complaints/${id}/generate-reply`, { answerSummary });
 
 /** ✅ 6️. 민원 답변 재생성 */
