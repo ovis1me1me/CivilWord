@@ -20,6 +20,7 @@ import pandas as pd
 from sqlalchemy import text
 import re
 from bllossom8b_infer.inference import generate_llm_reply  # 함수 임포트
+from blossom_summarizer.summarizer import summarize_with_blossom
 from typing import Any
 from sqlalchemy.orm import Session
 from app.schemas.complaint import ReplySummaryRequest
@@ -334,7 +335,6 @@ def get_complaint_summary(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # 현재 유저의 민원인지 확인
     complaint = db.query(Complaint).filter(
         Complaint.id == id,
         Complaint.user_uid == current_user.user_uid
@@ -343,17 +343,21 @@ def get_complaint_summary(
     if not complaint:
         raise HTTPException(status_code=404, detail="해당 민원이 없거나 권한이 없습니다.")
 
-    # 요약 처리 (예시)
-    complaint_summary = "민원 요지: " + complaint.content[:100]
-    complaint.summary = complaint_summary
-    db.commit()
-    db.refresh(complaint)
+    # ✅ 요약이 없을 때만 생성
+    if not complaint.summary:
+        complaint_summary = summarize_with_blossom(complaint.content)
+        complaint.summary = complaint_summary
+        db.commit()
+        db.refresh(complaint)
+    else:
+        complaint_summary = complaint.summary
 
     return ComplaintSummaryResponse(
         title=complaint.title,
         content=complaint.content,
         summary=complaint_summary
     )
+
 
 
 @router.get("/complaints/{id}/reply-summary", response_model=ComplaintSummaryResponse)
