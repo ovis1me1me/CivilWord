@@ -24,6 +24,8 @@ from blossom_summarizer.summarizer import summarize_with_blossom
 from typing import Any
 from sqlalchemy.orm import Session
 from app.schemas.complaint import ReplySummaryRequest
+from app.models.complaint_history import ComplaintHistory
+
 
 
 
@@ -487,47 +489,69 @@ def save_reply_summary(
 
 
 
-@router.get("/complaints/{id}/history-similar", response_model=List[ReplyBase])
+@router.get("/complaints/{id}/history-similar", response_model=List[dict])
 def get_similar_histories(
     id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # 1. 민원 본문 가져오기
+    # 1. 본인 민원 확인 및 민원요약 추출
     complaint = db.query(Complaint).filter(
         Complaint.id == id,
         Complaint.user_uid == current_user.user_uid
     ).first()
+
     if not complaint:
         raise HTTPException(status_code=404, detail="해당 민원이 없거나 권한이 없습니다.")
 
-    # 2. 텍스트 전처리 (소문자화 + 특수문자 제거 + 토큰 제한)
-    raw_text = complaint.content[:300]
-    cleaned_text = re.sub(r"[^\w\s]", " ", raw_text)
-    tokens = cleaned_text.split()
-    query_text = " ".join(tokens[:10]).lower()
+    query_text = complaint.summary
+    if not query_text or not str(query_text).strip():
+        raise HTTPException(status_code=400, detail="민원요약이 비어 있어 검색이 불가능합니다.")
 
-    if not query_text.strip():
-        raise HTTPException(status_code=400, detail="검색어가 유효하지 않습니다.")
-
-    # 3. Full Text Search (websearch_to_tsquery 사용)
+    # 2. 공개된 히스토리 중 유사 민원 검색
     sql = text("""
-        SELECT urh.*
-        FROM user_reply_history urh
-        WHERE to_tsvector('simple', LOWER(final_content)) @@ websearch_to_tsquery('simple', :query)
-        ORDER BY ts_rank(to_tsvector('simple', LOWER(final_content)), websearch_to_tsquery('simple', :query)) DESC
+        SELECT title, reply_summary, reply_content
+        FROM complaint_history
+        WHERE is_public = TRUE
+          AND reply_summary IS NOT NULL
+          AND to_tsvector('simple', LOWER(reply_summary::text)) @@ websearch_to_tsquery('simple', :query)
+        ORDER BY ts_rank(to_tsvector('simple', LOWER(reply_summary::text)), websearch_to_tsquery('simple', :query)) DESC
         LIMIT 10
     """)
-    
+
     try:
         rows = db.execute(sql, {"query": query_text}).fetchall()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"FTS 실행 실패: {str(e)}")
 
     if not rows:
-        raise HTTPException(status_code=404, detail="유사한 민원이 없습니다.")
+        raise HTTPException(status_code=404, detail="유사한 공개 민원이 없습니다.")
 
-    return [{"content": row.final_content} for row in rows]
+    return [
+        {
+            "title": row.title,
+            "reply_summary": row.reply_summary,
+            "content": row.reply_content
+        }
+        for row in rows
+    ]
+
+@router.get("/admin/public-histories", response_model=List[ReplyBase])
+def get_public_histories(db: Session = Depends(get_db)):
+    histories = db.query(ComplaintHistory).filter(ComplaintHistory.is_public == True).limit(10).all()
+
+    return [
+        ReplyBase(
+            id=history.id,
+            complaint_id=history.id,  # 또는 연결된 complaint_id가 따로 있으면 그것으로 대체
+            created_at=history.created_at,
+            title=history.title,
+            summary=history.summary or "",
+            content=history.reply_content or ""
+        )
+        for history in histories
+    ]
+
 
 
 @router.put("/complaints/{id}/reply-status", response_model=ResponseMessage)
