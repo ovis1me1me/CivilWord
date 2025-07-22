@@ -1,30 +1,50 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import './UserInfo.css';
 import { useNavigate } from 'react-router-dom';
-import { fetchUserInfo } from '../utils/api';
+import { fetchUserInfo, updateUserInfo } from '../utils/api'; // updateUserInfo도 미리 임포트
 
 function UserInfo() {
-  const navigate = useNavigate(); // 훅 사용
-
-  const handleStart = () => {
-    // `/upload_excel` 페이지로 이동
-    navigate('/upload_excel');
-  };
+  const navigate = useNavigate();
 
   const [form, setForm] = useState({
     name: '',
     department: '',
     contact: '',
+    email: '',
   });
+
+  // 1. 컴포넌트가 처음 렌더링 될 때 유저 정보 불러오기
+  useEffect(() => {
+    const loadUserInfo = async () => {
+      try {
+        const response = await fetchUserInfo();
+        setForm({
+          name: response.data.name || '',
+          department: response.data.department || '',
+          contact: response.data.contact || '',
+          email: response.data.email || '',
+        });
+      } catch (error) {
+        console.error('사용자 정보를 불러오는 데 실패했습니다.', error);
+      }
+    };
+    loadUserInfo();
+  }, []);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('입력된 정보:', form);
-    // 이후 단계(페이지 이동 등) 연결 가능
+    try {
+      await updateUserInfo(form);
+      alert('유저 정보가 성공적으로 수정되었습니다!');
+      navigate('/upload_excel');
+    } catch (error) {
+      console.error('유저 정보 수정 실패:', error);
+      alert('정보 수정에 실패했습니다. 다시 시도해주세요.');
+    }
   };
 
   return (
@@ -57,23 +77,20 @@ function UserInfo() {
           type="text"
           name="contact"
           placeholder="051-220-4000"
-          value={form.phone}
+          value={form.contact}
           onChange={handleChange}
         />
 
-        {/* <label>민원 카테고리</label> 
-        <select
-          name="category"
-          value={form.category}
+        <label>이메일</label>
+        <input
+          type="email"
+          name="email"
+          placeholder="example@domain.com"
+          value={form.email}
           onChange={handleChange}
-        >
-          <option value="">-- 선택 --</option>
-          <option value="불법주정차">불법주정차</option>
-          <option value="소음민원">소음민원</option>
-          <option value="불편신고">불편신고</option>
-        </select>*/}
+        />
 
-        <button className="start-button" onClick={handleStart}>
+        <button className="start-button" type="submit">
           수정하기
         </button>
       </form>

@@ -35,6 +35,12 @@ export const loginUser = (username: string, password: string) =>
 /** ✅ 현재 로그인된 사용자 정보 조회 */
 export const fetchUserInfo = () => instance.get('/user-info');
 
+/** ✅ 사용자 정보 수정 */
+export const updateUserInfo = async (data) => {
+  const response = await instance.put('/user-info', data);
+  return response.data;
+};
+
 /** ✅ 1️. 엑셀로 민원 업로드 */
 export const uploadExcelFile = (file: File) => {
   const formData = new FormData();
@@ -84,8 +90,15 @@ export const fetchReplySummary = (id: number) =>
   instance.get(`/complaints/${id}/reply-summary`);
 
 /** ✅ 10️. 답변 요지 저장 */
-export const saveReplySummary = (id: number, summary: string) =>
-  instance.post(`/complaints/${id}/reply-summary`, { summary });
+export const saveReplySummary = (id: number, payload: {
+  //complaint_summary: string;
+  answer_summary: {
+    review: string;
+    sections: { title: string; text: string }[];
+  }[];
+}) => {
+  return axios.post(`/complaints/${id}/reply-summary`, payload);
+};
 
 /** ✅ 11️. 답변 요지 수정 */
 export const updateReplySummary = (id: number, summary: string) =>

@@ -9,6 +9,7 @@ import { ComplaintDetail } from '../types/complaint';
 import {
   fetchComplaintDetail,
   fetchComplaintSummary,
+  saveReplySummary,
 } from '../utils/api';
 
 export default function ComplaintDetailPage() {
@@ -19,6 +20,7 @@ export default function ComplaintDetailPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  // 더미
   const [similarAnswersList, setSimilarAnswersList] = useState<string[][][]>([
     [
       ['도로 정비 요청 완료', '이관 완료', '유사 민원 답변'],
@@ -139,15 +141,53 @@ export default function ComplaintDetailPage() {
     );
   };
 
-    // 답변 생성
-  const handleGenerateAnswer = () => {
+  const handleGenerateAnswer = async () => {
+    if (!id) return;
+
+    const hasAtLeastOneFilled = answerBlocks.some(
+      block => block.summaryTitle.trim() !== ''
+    );
+
+    if (!hasAtLeastOneFilled) {
+      alert('최소 하나 이상의 답변 요지를 입력해야 합니다.');
+      return;
+    }
+
     setIsGenerating(true);
-    setTimeout(() => {
+
+    try {
+      const numericId = parseInt(id, 10);
+
+      // Define the labels array here
+      const labels = ['가', '나', '다', '라', '마', '바', '사', '아', '자', '차', '카', '타', '파', '하'];
+
+      // Construct the payload
+      const payload = {
+        answer_summary: answerBlocks.map(block => ({
+          review: block.summaryTitle,
+          sections: block.answerOptions
+            .filter(opt => opt.trim() !== '')
+            .map((opt, index) => ({
+              title: labels[index] || '',  // use labels based on the index
+              text: opt
+            }))
+        }))
+      };
+
+      console.log('보내는 payload:', JSON.stringify(payload, null, 2));
+      await saveReplySummary(numericId, payload);
+
       navigate(`/complaints/${id}/select-answer`, {
         state: { summaries: answerBlocks.map(block => block.summaryTitle) },
       });
-    }, 2000);
+    } catch (error) {
+      console.error('답변 요지 저장 실패:', error);
+      alert('답변 요지 저장 중 오류가 발생했습니다.');
+    } finally {
+      setIsGenerating(false);
+    }
   };
+
 
   if (isLoading || !complaint) {
     return <Spinner />;

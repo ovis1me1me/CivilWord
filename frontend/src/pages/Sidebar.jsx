@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom'; // ✅ useLocation 추가
 import './Sidebar.css';
 import {
   edit,
@@ -11,10 +11,11 @@ import {
   history,
   logout,
 } from '../assets/icons';
-import { fetchUserInfo } from '../utils/api'; // ✅ API 함수 import
+import { fetchUserInfo } from '../utils/api';
 
 const Sidebar = () => {
   const navigate = useNavigate();
+  const location = useLocation(); // ✅ 현재 라우트 감지
   const [userInfo, setUserInfo] = useState({
     name: '',
     department: '',
@@ -29,11 +30,10 @@ const Sidebar = () => {
         setUserInfo(response.data);
       } catch (error) {
         console.error('사용자 정보를 불러오는 데 실패했습니다.', error);
-        // 로그인 만료 등의 예외 처리도 고려 가능
       }
     };
     loadUserInfo();
-  }, []);
+  }, [location.pathname]); // ✅ 경로 변경 시마다 다시 유저 정보 fetch
 
   const handleLogout = () => {
     localStorage.removeItem('token');
