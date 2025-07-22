@@ -1,7 +1,7 @@
 import pandas as pd
 import io 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
-from sqlalchemy.orm import Session
+from sqlalchemy import Column, Integer, JSON  # 또는 JSONB (PostgreSQL)
 # 7/21 ComplaintResponse, ComplaintCreate 추가
 from app.schemas.complaint import ComplaintListResponse, FullReplySummaryResponse, ReplySummaryUpdateRequest, ComplaintResponse, ComplaintCreate
 from app.schemas.reply import ReplyBase
@@ -21,6 +21,12 @@ from sqlalchemy import text
 import re
 from bllossom8b_infer.inference import generate_llm_reply  # 함수 임포트
 from typing import Any
+from sqlalchemy.orm import Session
+from app.schemas.complaint import ReplySummaryRequest
+
+
+
+
 router = APIRouter()
 
 # DB 세션 의존성 주입
@@ -391,34 +397,36 @@ def update_reply_summary(
         raise HTTPException(status_code=404, detail="해당 민원이 없거나 권한이 없습니다.")
 
     # 요약 저장 (수정)
-    complaint.reply_summary = data.summary
+    complaint.reply_summary = data.answer_summary
     db.commit()
     db.refresh(complaint)
 
     return ResponseMessage(message="Reply summary updated successfully!")
 
 @router.post("/complaints/{id}/reply-summary", response_model=ResponseMessage)
-def input_reply_summary(
+def save_reply_summary(
     id: int,
-    summary: str,
+    req: ReplySummaryRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # 본인 민원인지 확인
     complaint = db.query(Complaint).filter(
         Complaint.id == id,
         Complaint.user_uid == current_user.user_uid
     ).first()
 
     if not complaint:
-        raise HTTPException(status_code=404, detail="해당 민원이 없거나 권한이 없습니다.")
+        raise HTTPException(status_code=404, detail="해당 민원을 찾을 수 없습니다.")
 
-    # 요약 저장
-    complaint.reply_summary = summary
+    # JSON 형태 그대로 저장 (필드가 Text 또는 JSON 타입이어야 함)
+    import json
+    complaint.reply_summary = json.dumps(
+        [item.dict() for item in req.answer_summary], 
+        ensure_ascii=False
+    )
     db.commit()
-    db.refresh(complaint)
+    return {"message": "답변요지가 저장되었습니다."}
 
-    return ResponseMessage(message="Reply summary saved successfully!")
 
 
 # @router.get("/complaints/{id}/reply-options", response_model=List[ReplyBase])

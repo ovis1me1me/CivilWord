@@ -4,6 +4,9 @@ from app.database import engine, Base
 from app.routers import complaint_history, complaint, user_info, login, register, user_history,user
 from app.services.llm_service import generate_answer, InputSchema
 from pydantic import BaseModel
+from fastapi.exceptions import RequestValidationError
+from fastapi import Request
+from fastapi.responses import JSONResponse
 
 
 
@@ -33,6 +36,16 @@ app.include_router(register.router)
 app.include_router(user_history.router)
 app.include_router(user.router)
 app.include_router(complaint_history.router)
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=422,
+        content={
+            "detail": exc.errors(),
+            "body": exc.body
+        }
+    )
 
 # 루트 엔드포인트
 @app.get("/")

@@ -97,7 +97,7 @@ export const saveReplySummary = (id: number, payload: {
     sections: { title: string; text: string }[];
   }[];
 }) => {
-  return axios.post(`/complaints/${id}/reply-summary`, payload);
+  return instance.post(`/complaints/${id}/reply-summary`, payload);
 };
 
 /** ✅ 11️. 답변 요지 수정 */

@@ -50,3 +50,14 @@ class FullReplySummaryResponse(BaseModel):
 # ✅ 답변 요지 수정용 request body
 class ReplySummaryUpdateRequest(BaseModel):
     summary: Any
+
+class Section(BaseModel):
+    title: str
+    text: str
+
+class AnswerSummaryItem(BaseModel):
+    review: str
+    sections: List[Section]
+
+class ReplySummaryRequest(BaseModel):
+    answer_summary: List[AnswerSummaryItem]
