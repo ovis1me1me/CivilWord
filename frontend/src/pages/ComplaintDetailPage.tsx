@@ -49,9 +49,15 @@ export default function ComplaintDetailPage() {
           fetchComplaintSummary(numericId),
         ]);
 
+        // const isGarbage = (text: string) => {
+        //   const t = text.trim();
+        //   return t === '';
+        // };
+
         const complaintData = complaintRes.data;
         const summary = summaryRes.data.summary || '';
-        const replySummary = complaintData.reply_summary || '';
+        // const replySummaryRaw = complaintData.reply_summary || '';
+        const replySummary = '';
 
         setComplaint({
           id: complaintData.id,
@@ -108,18 +114,23 @@ export default function ComplaintDetailPage() {
 
   // 답변 요지 삭제
   const handleDeleteAnswerOption = (summaryIndex: number, answerIndex: number) => {
-    setAnswerBlocks(prev =>
-      prev.map((block, i) =>
-        i === summaryIndex
-          ? {
-              ...block,
-              answerOptions: block.answerOptions.filter(
-                (_, idx) => idx !== answerIndex
-              ),
-            }
-          : block
-      )
-    );
+    setAnswerBlocks(prev => {
+      // 옵션 삭제
+      const newBlocks = prev.map((block, i) => {
+        if (i !== summaryIndex) return block;
+        const updatedOptions = block.answerOptions.filter((_, idx) => idx !== answerIndex);
+        return { ...block, answerOptions: updatedOptions };
+      });
+
+      // 삭제되기 전 조건 확인
+      const filteredBlocks = newBlocks.filter(
+        (block) =>
+          !(block.answerOptions.length === 0 && block.summaryTitle.trim() === '')
+      );
+
+      // 최소 1개는 유지
+      return filteredBlocks.length === 0 ? [{ summaryTitle: '', answerOptions: [''] }] : filteredBlocks;
+    });
   };
 
   // 답변 요지 입력
@@ -142,6 +153,7 @@ export default function ComplaintDetailPage() {
     );
   };
 
+  // 답변 생성
   const handleGenerateAnswer = async () => {
     if (!id) return;
 
@@ -164,15 +176,25 @@ export default function ComplaintDetailPage() {
 
       // Construct the payload
       const payload = {
-        answer_summary: answerBlocks.map(block => ({
-          review: block.summaryTitle,
-          sections: block.answerOptions
-            .filter(opt => opt.trim() !== '')
-            .map((opt, index) => ({
-              title: labels[index] || '',  // use labels based on the index
-              text: opt
-            }))
-        }))
+        answer_summary: answerBlocks
+          .map(block => {
+            const filledOptions = block.answerOptions.filter(opt => opt.trim() !== '');
+
+            if (block.summaryTitle.trim() === '' || filledOptions.length === 0) {
+              return null;
+            }
+
+            return {
+              review: block.summaryTitle,
+              sections: filledOptions.map((opt, index) => ({
+                title: labels[index] || '',
+                text: opt,
+              })),
+            };
+          })
+          .filter(
+            (item): item is { review: string; sections: { title: string; text: string }[] } => item !== null
+          ),
       };
 
       console.log('보내는 payload:', JSON.stringify(payload, null, 2));
@@ -194,7 +216,6 @@ export default function ComplaintDetailPage() {
     }
   };
 
-
   if (isLoading || !complaint) {
     return <Spinner />;
   }
@@ -202,7 +223,7 @@ export default function ComplaintDetailPage() {
   return (
     <div className="ml-[250px] p-4">
       <div className="p-4 max-w-[1000px] mx-auto space-y-6 relative">
-        <Header complaintId={complaint.id} title={complaint.title} />
+        <Header title={complaint.title} />
         <ContentBox content={complaint.content} />
         <ContentBox label="민원 요지" content={complaint.summary} />
 

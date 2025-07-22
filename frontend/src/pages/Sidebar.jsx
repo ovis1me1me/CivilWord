@@ -48,7 +48,7 @@ const Sidebar = () => {
       <div className="sidebar-section">
         <div className="sidebar-label-with-edit">
           <p className="sidebar-label">프로필</p>
-          <img src={edit} alt="수정 아이콘" className="edit-icon" onClick={() => navigate('/userinfo')} />
+          <img src={edit} alt="수정 아이콘" className="edit-icon" onClick={() => navigate('/userinfo', { state: { from: location.pathname } })} />
         </div>
         <ul>
           <li><img src={nameIcon} alt="이름 아이콘" /> {userInfo.name}</li>
