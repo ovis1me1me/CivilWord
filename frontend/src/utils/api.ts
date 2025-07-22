@@ -90,8 +90,15 @@ export const fetchReplySummary = (id: number) =>
   instance.get(`/complaints/${id}/reply-summary`);
 
 /** ✅ 10️. 답변 요지 저장 */
-export const saveReplySummary = (id: number, summary: string) =>
-  instance.post(`/complaints/${id}/reply-summary`, { summary });
+export const saveReplySummary = (id: number, payload: {
+  //complaint_summary: string;
+  answer_summary: {
+    review: string;
+    sections: { title: string; text: string }[];
+  }[];
+}) => {
+  return axios.post(`/complaints/${id}/reply-summary`, payload);
+};
 
 /** ✅ 11️. 답변 요지 수정 */
 export const updateReplySummary = (id: number, summary: string) =>
