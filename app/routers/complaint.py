@@ -225,17 +225,17 @@ def generate_reply(
 
     # === 답변 조립 ===
     fixed_header = (
-    "1. 평소 구정에 관심을 가져주신데 대해 감사드립니다.\n")
+    " 평소 구정에 관심을 가져주신데 대해 감사드립니다.\n")
 
     fixed_summary = (
-        f"2. 귀하께서 요청하신 민원은 \"{complaint.summary}\"에 관한 것으로 이해됩니다.\n"
+        f" 귀하께서 요청하신 민원은 \"{complaint.summary}\"에 관한 것으로 이해됩니다.\n"
     )
 
     # 📌 여기에서 LLM 호출
     generated_core = generate_llm_reply(complaint.reply_summary)
 
     fixed_footer = (
-        f"4. 기타 궁금하신 사항은 {user_info.department}({user_info.name}, "
+        f" 기타 궁금하신 사항은 {user_info.department}({user_info.name}, "
         f"{user_info.contact})로 문의하여 주시면 성심껏 답변드리겠습니다. 감사합니다."
     )
 
@@ -287,13 +287,13 @@ def generate_reply_again(
 
     # 답변 내용 재조립
     fixed_header = (
-    "1. 평소 구정에 관심을 가져주신데 대해 감사드립니다.\n"
+    " 평소 구정에 관심을 가져주신데 대해 감사드립니다.\n"
     )
     fixed_summary = (
-        f"2. 귀하께서 요청하신 민원은 \"{complaint.summary}\"에 관한 것으로 이해됩니다.\n"
+        f" 귀하께서 요청하신 민원은 \"{complaint.summary}\"에 관한 것으로 이해됩니다.\n"
     )
     fixed_footer = (
-        f"4. 기타 궁금하신 사항은 {user_info.department}({user_info.name}, "
+        f" 기타 궁금하신 사항은 {user_info.department}({user_info.name}, "
         f"{user_info.contact})로 문의하여 주시면 성심껏 답변드리겠습니다. 감사합니다."
     )
     generated_core = generate_llm_reply(complaint.reply_summary)
