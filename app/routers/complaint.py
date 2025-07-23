@@ -246,6 +246,7 @@ def generate_reply(
         "footer": fixed_footer
     }
 
+
     # DB 저장
     reply = Reply(
         complaint_id=id,
