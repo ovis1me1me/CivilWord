@@ -127,8 +127,7 @@ def download_complaints_excel(
         headers={"Content-Disposition": "attachment; filename=complaints.xlsx"}
     )
 
-@router.get("/complaints", response_model=ComplaintListResponse) #수정함
-
+@router.get("/complaints", response_model=ComplaintListResponse)
 def get_complaints(
     db: Session = Depends(get_db), 
     sort: Optional[str] = None,
@@ -138,19 +137,20 @@ def get_complaints(
 ):
     query = db.query(Complaint).filter(Complaint.user_uid == current_user.user_uid)
 
-    total = query.count() 
+    total = query.count()
 
-    if sort == "created":
+    if sort == "created_desc":
         complaints = query.order_by(Complaint.created_at.desc()).offset(skip).limit(limit).all()
-
-
+    elif sort == "created_asc":
+        complaints = query.order_by(Complaint.created_at.asc()).offset(skip).limit(limit).all()
     else:
         complaints = query.offset(skip).limit(limit).all()
 
     return {
-        "total": total,          #  전체 개수 포함
+        "total": total,
         "complaints": complaints
     }
+
 
 # 7/21 추가
 @router.get("/complaints/{id}", response_model=ComplaintResponse)
@@ -520,10 +520,10 @@ def get_similar_histories(
     # """)
     
     sql = text("""
-    SELECT title, reply_summary, reply_content
+    SELECT title, summary, reply_content
     FROM complaint_history
     WHERE is_public = TRUE
-      AND reply_summary IS NOT NULL
+      AND summary IS NOT NULL
     ORDER BY created_at DESC
     LIMIT 2
 """)
@@ -540,7 +540,7 @@ def get_similar_histories(
     return [
         {
             "title": row.title,
-            "reply_summary": row.reply_summary,
+            "summary": row.summary,
             "content": row.reply_content
         }
         for row in rows
