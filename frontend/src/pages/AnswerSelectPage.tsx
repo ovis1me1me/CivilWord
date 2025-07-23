@@ -7,26 +7,27 @@ import LeftPanel from '../component/AnswerSelect/LeftPanel';
 import RightPanel from '../component/AnswerSelect/RightPanel';
 import SegmentedControl from '../component/AnswerSelect/SegmentedControl';
 import AnswerBox from '../component/AnswerSelect/AnswerBox';
-import { FullAnswer, createNewBlock } from '../component/AnswerSelect/types'; // createNewBlock도 import
+// ContentBlock 타입을 import하여 명시적으로 사용합니다.
+import { FullAnswer, createNewBlock, ContentBlock } from '../component/AnswerSelect/types';
 import AnswerSelectActions from '../component/AnswerSelect/AnswerSelectActions';
 import Spinner from '../component/Shared/Spinner';
 
+// 이 페이지 내에서만 사용하는 타입 정의
 interface AnswerSection {
   title: string;
   text: string;
 }
 
 interface AnswerSummaryBlock {
-  review: string;
-  sections: AnswerSection[];
+  index: string;
+  section: AnswerSection[];
 }
 
-// (헬퍼 함수들은 이전과 동일)
-// 백엔드 데이터 구조에 맞는 새로운 헬퍼 함수
+// 백엔드 데이터 구조를 프론트엔드에서 사용하는 FullAnswer 형태로 변환하는 헬퍼 함수
 const convertBackendReplyToFullAnswer = (backendReply: any, complaintSummaryText: string): FullAnswer => {
   const content = backendReply?.content;
 
-  // 백엔드 데이터의 content가 객체가 아니거나 없는 경우, 기본 오류 구조를 반환합니다.
+  // 기본 오류 처리
   if (typeof content !== 'object' || content === null) {
     return {
       greeting: '오류',
@@ -36,15 +37,37 @@ const convertBackendReplyToFullAnswer = (backendReply: any, complaintSummaryText
     };
   }
 
-  // 백엔드의 header, body, footer를 FullAnswer 구조에 맞게 매핑합니다.
   const greeting = content.header || '인사말이 없습니다.';
-  const body = content.body || '본문 내용이 없습니다.';
+  const body = content.body || '[]'; // body가 비어있을 경우 빈 JSON 배열로 처리
   const closing = content.footer || '끝맺음말이 없습니다.';
+  
+  // [오류 수정] contentBlocks의 타입을 ContentBlock[]으로 명시하여 'never[]' 오류를 해결합니다.
+  let contentBlocks: ContentBlock[] = [];
+
+  try {
+    const parsedBody = JSON.parse(body);
+
+    if (Array.isArray(parsedBody)) {
+      contentBlocks = parsedBody.map(block => {
+        return {
+          id: uuidv4(),
+          title: block.index || '', // 'index' 값을 'title'로 사용
+          sections: (block.section || []).map(sec => ({
+            id: uuidv4(),
+            text: sec.text || '',
+          }))
+        };
+      });
+    }
+  } catch (e) {
+    console.error("본문(body) JSON 파싱 실패:", e);
+    contentBlocks = [createNewBlock('답변 본문 형식에 오류가 있습니다.')];
+  }
 
   return {
     greeting: greeting,
-    complaintSummary: complaintSummaryText, // 실제 민원 요지는 다른 API에서 오므로, 여기서는 기본값을 사용합니다.
-    contentBlocks: [createNewBlock(body)], // body 전체를 하나의 contentBlock으로 만듭니다.
+    complaintSummary: complaintSummaryText,
+    contentBlocks: contentBlocks,
     closing: closing
   };
 };
@@ -73,7 +96,6 @@ export default function AnswerSelectPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   
-  // 데이터 로딩 함수를 useCallback으로 감싸서 재사용 가능하게 함
   const loadReplyData = useCallback(async (showLoadingSpinner = true) => {
     if (!id) return;
     if (showLoadingSpinner) {
@@ -88,8 +110,6 @@ export default function AnswerSelectPage() {
       ]);
 
       const actualComplaintSummary = complaintSummaryRes.data.summary || '민원 요약 없음';
-      // ✅✅✅ [핵심 수정] 백엔드 응답 구조에 맞게 데이터를 처리합니다. ✅✅✅
-      // 백엔드는 민원 제목/내용을 /replies 엔드포인트에서 주지 않으므로, 다른 API 응답에서 가져옵니다.
       setComplaintTitle(complaintSummaryRes.data.title || '제목 없음');
       setComplaintContent(complaintSummaryRes.data.content || '내용 없음');
       setComplaintSummary(actualComplaintSummary);
@@ -97,22 +117,16 @@ export default function AnswerSelectPage() {
       const rawSummary = replySummaryRes.data.summary || '[]';
       try {
         const parsedSummary = JSON.parse(rawSummary);
-        setAnswerSummaryBlocks(Array.isArray(parsedSummary) && parsedSummary.length > 0 ? parsedSummary : [{ review: '', sections: [{ title: '가', text: '' }] }]);
+        setAnswerSummaryBlocks(Array.isArray(parsedSummary) && parsedSummary.length > 0 ? parsedSummary : [{ index: '', section: [{ title: '가', text: '' }] }]);
       } catch {
-        setAnswerSummaryBlocks([{ review: '', sections: [{ title: '가', text: '' }] }]);
+        setAnswerSummaryBlocks([{ index: '', section: [{ title: '가', text: '' }] }]);
       }
 
-      // 백엔드는 `repliesRes.data`에 답변 배열을 직접 반환합니다.
-      // `generated_replies` 키가 없으므로 `repliesRes.data`를 바로 사용합니다.
       const rawAnswers = repliesRes.data || [];
       const processedAnswers = rawAnswers.map(reply => 
         convertBackendReplyToFullAnswer(reply, actualComplaintSummary)
       );
       setGeneratedAnswers(processedAnswers);
-
-      // selected_reply 처리 로직은 백엔드 응답에 따라 조정이 필요할 수 있습니다.
-      // 우선 이 부분은 주석 처리하거나, 백엔드 응답을 확인 후 수정합니다.
-      // if (repliesRes.data.selected_reply) { ... }
 
       setSelectedAnswer(null);
       setCurrentPage(0);
@@ -120,7 +134,6 @@ export default function AnswerSelectPage() {
 
     } catch (err) {
       console.error('데이터 불러오기 실패', err);
-      // 답변이 없는 경우(404)는 에러로 처리하지 않도록 분기
       if ((err as any).response?.status === 404) {
         setGeneratedAnswers([]);
       } else {
@@ -131,16 +144,15 @@ export default function AnswerSelectPage() {
     }
   }, [id]);
 
-  // --- 데이터 최초 로딩 ---
   useEffect(() => {
     loadReplyData();
   }, [loadReplyData]);
 
-  // --- 답변 요지 편집 핸들러 함수들 ---
-  const handleReviewChange = (blockIndex: number, value: string) => {
+  // --- 답변 요지 편집 핸들러 함수들 (오류 수정) ---
+  const handleIndexChange = (blockIndex: number, value: string) => {
     setAnswerSummaryBlocks(prev =>
       prev.map((block, i) =>
-        i === blockIndex ? { ...block, review: value } : block
+        i === blockIndex ? { ...block, index: value } : block
       )
     );
   };
@@ -149,10 +161,10 @@ export default function AnswerSelectPage() {
     setAnswerSummaryBlocks(prev =>
       prev.map((block, i) => {
         if (i !== blockIndex) return block;
-        const newSections = block.sections.map((section, j) =>
-          j === sectionIndex ? { ...section, text: value } : section
+        const newSections = block.section.map((sectionItem, j) =>
+          j === sectionIndex ? { ...sectionItem, text: value } : sectionItem
         );
-        return { ...block, sections: newSections };
+        return { ...block, section: newSections };
       })
     );
   };
@@ -162,9 +174,9 @@ export default function AnswerSelectPage() {
     setAnswerSummaryBlocks(prev =>
       prev.map((block, i) => {
         if (i !== blockIndex) return block;
-        const nextLabel = labels[block.sections.length] || '•';
+        const nextLabel = labels[block.section.length] || '•';
         const newSection = { title: nextLabel, text: '' };
-        return { ...block, sections: [...block.sections, newSection] };
+        return { ...block, section: [...block.section, newSection] };
       })
     );
   };
@@ -173,12 +185,12 @@ export default function AnswerSelectPage() {
     const labels = ['가', '나', '다', '라', '마', '바', '사', '아', '자', '차', '카', '타', '파', '하'];
     setAnswerSummaryBlocks(prev => {
       const targetBlock = prev[blockIndex];
-      const updatedSections = targetBlock.sections.filter((_, i) => i !== sectionIndex);
+      const updatedSections = targetBlock.section.filter((_, i) => i !== sectionIndex);
 
       if (updatedSections.length === 0) {
         const newBlocks = prev.filter((_, i) => i !== blockIndex);
         if (newBlocks.length === 0) {
-          return [{ review: '', sections: [{ title: '가', text: '' }] }];
+          return [{ index: '', section: [{ title: '가', text: '' }] }];
         }
         return newBlocks;
       } else {
@@ -186,8 +198,8 @@ export default function AnswerSelectPage() {
           if (i !== blockIndex) return block;
           return {
             ...block,
-            sections: updatedSections.map((section, j) => ({
-              ...section,
+            section: updatedSections.map((sectionItem, j) => ({
+              ...sectionItem,
               title: labels[j] || '•',
             })),
           };
@@ -199,11 +211,10 @@ export default function AnswerSelectPage() {
   const handleAddBlock = () => {
     setAnswerSummaryBlocks(prev => [
       ...prev,
-      { review: '', sections: [{ title: '가', text: '' }] },
+      { index: '', section: [{ title: '가', text: '' }] },
     ]);
   };
 
-  // 저장 로직에서 새로운 헬퍼 함수 사용
   const saveAnswer = async (status: '수정중' | '답변완료') => {
     const confirmMessage = status === REPLY_STATUS.COMPLETED ? '답변을 완료하시겠습니까?' : '답변을 보류하고 목록으로 이동할까요?';
     if (window.confirm(confirmMessage)) {
@@ -212,11 +223,8 @@ export default function AnswerSelectPage() {
         const finalAnswerString = fullAnswerToString(selectedAnswer);
         
         await Promise.all([
-          // 1. 최종 선택된 답변 저장 (백엔드 API가 이 이름으로 답변 본문을 저장한다고 가정)
           updateReplySummary(Number(id), finalAnswerString), 
-          // 2. 편집된 답변 요지도 함께 저장
           saveReplySummary(Number(id), { answer_summary: answerSummaryBlocks }),
-          // 3. 민원 상태 변경
           updateReplyStatus(Number(id), status)
         ]);
         
@@ -238,14 +246,9 @@ export default function AnswerSelectPage() {
     try {
       const payload = { answer_summary: answerSummaryBlocks };
       
-      // 1. 현재 편집된 답변 요지를 먼저 서버에 저장
       await saveReplySummary(Number(id), payload);
-      
-      // 2. 저장된 최신 요지를 기반으로 답변 재생성을 요청
       await regenerateReply(Number(id));
-      
-      // 3. 재생성이 완료되면, 전체 답변 데이터를 다시 불러와 화면을 업데이트
-      await loadReplyData(false); // 페이지 전체 로딩 스피너는 보이지 않게 함
+      await loadReplyData(false);
 
     } catch (err) {
       console.error('답변 재생성 실패', err);
@@ -255,12 +258,9 @@ export default function AnswerSelectPage() {
     }
   };
 
-  // 로딩 및 에러 처리는 여기서 먼저 수행 (Early Return)
   if (loading) return <div className="flex justify-center items-center h-screen"><Spinner /></div>;
   if (error) return <div className="flex justify-center items-center h-screen text-red-500">{error}</div>;
-  console.log('최종 출력 답변: ', generatedAnswers)
 
-  // 최종 렌더링 JSX (하나의 return 문으로 통합)
   return (
     <div className="flex flex-col w-full max-w-6xl mx-auto p-8 space-y-8 min-h-screen bg-slate-50 ml-[300px] p-4">
       <Header title={complaintTitle} />
@@ -271,7 +271,7 @@ export default function AnswerSelectPage() {
         <RightPanel
           summary={complaintSummary}
           answerSummaryBlocks={answerSummaryBlocks}
-          onReviewChange={handleReviewChange}
+          onReviewChange={handleIndexChange} // [오류 수정] onReviewChange -> onIndexChange
           onSectionChange={handleSectionChange}
           onAddSection={handleAddSection}
           onDeleteSection={handleDeleteSection}
@@ -286,13 +286,11 @@ export default function AnswerSelectPage() {
 
       <div className="flex gap-4 relative min-h-[384px]">
         {selectedSegment === '생성된 답변' && generatedAnswers.length > 0 && (
-          // 3. AnswerBox에 isEditing, onEdit prop 추가
           <AnswerBox
             content={selectedAnswer ?? generatedAnswers[currentPage]}
             onChange={setSelectedAnswer}
             isEditing={isEditing}
             onEdit={() => {
-              // 원본 데이터를 보호하기 위해 깊은 복사 사용
               setSelectedAnswer(JSON.parse(JSON.stringify(generatedAnswers[currentPage])));
               setIsEditing(true);
             }}

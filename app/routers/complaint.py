@@ -236,8 +236,12 @@ def generate_reply(
         f"{user_info.contact})로 문의하여 주시면 성심껏 답변드리겠습니다. 감사합니다."
     )
 
-    reply_content = f"{fixed_header}{generated_core}\{fixed_footer}"
-
+    reply_content = {
+        "header": fixed_header,
+        "body": generated_core,
+        "footer": fixed_footer
+    }
+    
     # DB 저장
     reply = Reply(
         complaint_id=id,
