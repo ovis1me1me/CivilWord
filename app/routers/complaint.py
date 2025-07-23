@@ -518,6 +518,16 @@ def get_similar_histories(
         ORDER BY ts_rank(to_tsvector('simple', LOWER(reply_summary::text)), websearch_to_tsquery('simple', :query)) DESC
         LIMIT 10
     """)
+    
+#     sql = text("""
+#     SELECT title, reply_summary, reply_content
+#     FROM complaint_history
+#     WHERE is_public = TRUE
+#       AND reply_summary IS NOT NULL
+#     ORDER BY created_at DESC
+#     LIMIT 10
+# """)
+    
 
     try:
         rows = db.execute(sql, {"query": query_text}).fetchall()
