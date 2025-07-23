@@ -509,24 +509,24 @@ def get_similar_histories(
         raise HTTPException(status_code=400, detail="민원요약이 비어 있어 검색이 불가능합니다.")
 
     # 2. 공개된 히스토리 중 유사 민원 검색
-    sql = text("""
-        SELECT title, reply_summary, reply_content
-        FROM complaint_history
-        WHERE is_public = TRUE
-          AND reply_summary IS NOT NULL
-          AND to_tsvector('simple', LOWER(reply_summary::text)) @@ websearch_to_tsquery('simple', :query)
-        ORDER BY ts_rank(to_tsvector('simple', LOWER(reply_summary::text)), websearch_to_tsquery('simple', :query)) DESC
-        LIMIT 10
-    """)
+    # sql = text("""
+    #     SELECT title, reply_summary, reply_content
+    #     FROM complaint_history
+    #     WHERE is_public = TRUE
+    #       AND reply_summary IS NOT NULL
+    #       AND to_tsvector('simple', LOWER(reply_summary::text)) @@ websearch_to_tsquery('simple', :query)
+    #     ORDER BY ts_rank(to_tsvector('simple', LOWER(reply_summary::text)), websearch_to_tsquery('simple', :query)) DESC
+    #     LIMIT 10
+    # """)
     
-#     sql = text("""
-#     SELECT title, reply_summary, reply_content
-#     FROM complaint_history
-#     WHERE is_public = TRUE
-#       AND reply_summary IS NOT NULL
-#     ORDER BY created_at DESC
-#     LIMIT 10
-# """)
+    sql = text("""
+    SELECT title, reply_summary, reply_content
+    FROM complaint_history
+    WHERE is_public = TRUE
+      AND reply_summary IS NOT NULL
+    ORDER BY created_at DESC
+    LIMIT 2
+""")
     
 
     try:
