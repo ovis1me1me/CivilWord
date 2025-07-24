@@ -206,7 +206,6 @@ def generate_reply(
         Complaint.id == id,
         Complaint.user_uid == current_user.user_uid
     ).first()
-
     if not complaint:
         raise HTTPException(status_code=404, detail="해당 민원을 찾을 수 없거나 권한이 없습니다.")
 
