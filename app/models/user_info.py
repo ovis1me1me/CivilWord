@@ -24,7 +24,7 @@ class UserInfo(Base):
     name = Column(String)         # 실명 or 닉네임
     department = Column(String)   # 부서
     contact = Column(String)      # 연락처
-    email = Column(String)      # 이메일일
+    email = Column(String)      # 이메일
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

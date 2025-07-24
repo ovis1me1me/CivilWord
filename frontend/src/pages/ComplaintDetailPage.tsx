@@ -49,9 +49,15 @@ export default function ComplaintDetailPage() {
           fetchComplaintSummary(numericId),
         ]);
 
+        // const isGarbage = (text: string) => {
+        //   const t = text.trim();
+        //   return t === '';
+        // };
+
         const complaintData = complaintRes.data;
         const summary = summaryRes.data.summary || '';
-        const replySummary = complaintData.reply_summary || '';
+        // const replySummaryRaw = complaintData.reply_summary || '';
+        const replySummary = '';
 
         setComplaint({
           id: complaintData.id,
@@ -108,18 +114,23 @@ export default function ComplaintDetailPage() {
 
   // 답변 요지 삭제
   const handleDeleteAnswerOption = (summaryIndex: number, answerIndex: number) => {
-    setAnswerBlocks(prev =>
-      prev.map((block, i) =>
-        i === summaryIndex
-          ? {
-              ...block,
-              answerOptions: block.answerOptions.filter(
-                (_, idx) => idx !== answerIndex
-              ),
-            }
-          : block
-      )
-    );
+    setAnswerBlocks(prev => {
+      // 옵션 삭제
+      const newBlocks = prev.map((block, i) => {
+        if (i !== summaryIndex) return block;
+        const updatedOptions = block.answerOptions.filter((_, idx) => idx !== answerIndex);
+        return { ...block, answerOptions: updatedOptions };
+      });
+
+      // 삭제되기 전 조건 확인
+      const filteredBlocks = newBlocks.filter(
+        (block) =>
+          !(block.answerOptions.length === 0 && block.summaryTitle.trim() === '')
+      );
+
+      // 최소 1개는 유지
+      return filteredBlocks.length === 0 ? [{ summaryTitle: '', answerOptions: [''] }] : filteredBlocks;
+    });
   };
 
   // 답변 요지 입력
@@ -142,58 +153,70 @@ export default function ComplaintDetailPage() {
     );
   };
 
+  // 답변 생성
   const handleGenerateAnswer = async () => {
-    if (!id) return;
+    if (!id) return;
 
-    const hasAtLeastOneFilled = answerBlocks.some(
-      block => block.summaryTitle.trim() !== ''
-    );
+    const hasAtLeastOneFilled = answerBlocks.some(
+      (block) => block.summaryTitle.trim() !== ''
+    );
 
-    if (!hasAtLeastOneFilled) {
-      alert('최소 하나 이상의 답변 요지를 입력해야 합니다.');
-      return;
-    }
+    if (!hasAtLeastOneFilled) {
+      alert('최소 하나 이상의 답변 요지를 입력해야 합니다.');
+      return;
+    }
 
-    setIsGenerating(true);
+    setIsGenerating(true);
 
-    try {
-      const numericId = parseInt(id, 10);
+    try {
+      const numericId = parseInt(id, 10);
 
-      // Define the labels array here
-      const labels = ['가', '나', '다', '라', '마', '바', '사', '아', '자', '차', '카', '타', '파', '하'];
+      // Define the labels array here
+      const labels = ['가', '나', '다', '라', '마', '바', '사', '아', '자', '차', '카', '타', '파', '하'];
 
-      // Construct the payload
-      const payload = {
-        answer_summary: answerBlocks.map(block => ({
-          review: block.summaryTitle,
-          sections: block.answerOptions
-            .filter(opt => opt.trim() !== '')
-            .map((opt, index) => ({
-              title: labels[index] || '',  // use labels based on the index
-              text: opt
-            }))
-        }))
-      };
+      // Construct the payload
+      const payload = {
+        answer_summary: answerBlocks
+          .map((block) => {
+            const filledOptions = block.answerOptions.filter(
+              (opt) => opt.trim() !== ''
+            );
 
-      console.log('보내는 payload:', JSON.stringify(payload, null, 2));
-      // 답변 요지 저장
-      await saveReplySummary(numericId, payload);
+            if (block.summaryTitle.trim() === '' || filledOptions.length === 0) {
+              return null;
+            }
 
-      // 2) 답변 1회 생성 API 호출 (JWT 인증 필요)
-      const replyResponse = await generateReply(numericId, payload);
-      console.log('생성된 답변:', replyResponse.data);
+            return {
+              index: block.summaryTitle, // 'review'를 'index'로 변경
+              section: filledOptions.map((opt, index) => ({ // 'sections'를 'section'으로 변경
+                title: labels[index] || '',
+                text: opt,
+              })),
+            };
+          })
+          .filter(
+            (item): item is { index: string; section: { title: string; text: string }[] } => item !== null // 타입 단언도 수정
+          ),
+      };
 
-      navigate(`/complaints/${id}/select-answer`, {
-        state: { summaries: answerBlocks.map(block => block.summaryTitle) },
-      });
-    } catch (error) {
-      console.error('답변 요지 저장 실패:', error);
-      alert('답변 요지 저장 중 오류가 발생했습니다.');
-    } finally {
-      setIsGenerating(false);
-    }
-  };
+      console.log('보내는 payload:', JSON.stringify(payload, null, 2));
+      // 답변 요지 저장
+      await saveReplySummary(numericId, payload);
 
+      // 2) 답변 1회 생성 API 호출 (JWT 인증 필요)
+      const replyResponse = await generateReply(numericId, payload);
+      console.log('생성된 답변:', replyResponse.data);
+
+      navigate(`/complaints/${id}/select-answer`, {
+        state: { summaries: answerBlocks.map((block) => block.summaryTitle) },
+      });
+    } catch (error) {
+      console.error('답변 요지 저장 실패:', error);
+      alert('답변 요지 저장 중 오류가 발생했습니다.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   if (isLoading || !complaint) {
     return <Spinner />;
@@ -202,7 +225,7 @@ export default function ComplaintDetailPage() {
   return (
     <div className="ml-[250px] p-4">
       <div className="p-4 max-w-[1000px] mx-auto space-y-6 relative">
-        <Header complaintId={complaint.id} title={complaint.title} />
+        <Header title={complaint.title} />
         <ContentBox content={complaint.content} />
         <ContentBox label="민원 요지" content={complaint.summary} />
 

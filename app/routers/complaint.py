@@ -132,10 +132,10 @@ def download_complaints_excel(
         headers={"Content-Disposition": "attachment; filename=complaints.xlsx"}
     )
 
+
 # 3. 민원 목록 반환 라우터
 # 해당 유저 [complaint] 민원 목록 반환
-@router.get("/complaints", response_model=ComplaintListResponse) #수정함
-
+@router.get("/complaints", response_model=ComplaintListResponse) 
 def get_complaints(
     db: Session = Depends(get_db), 
     sort: Optional[str] = None,
@@ -145,17 +145,17 @@ def get_complaints(
 ):
     query = db.query(Complaint).filter(Complaint.user_uid == current_user.user_uid)
 
-    total = query.count() 
+    total = query.count()
 
-    if sort == "created":
+    if sort == "created_desc":
         complaints = query.order_by(Complaint.created_at.desc()).offset(skip).limit(limit).all()
-
-
+    elif sort == "created_asc":
+        complaints = query.order_by(Complaint.created_at.asc()).offset(skip).limit(limit).all()
     else:
         complaints = query.offset(skip).limit(limit).all()
 
     return {
-        "total": total,          #  전체 개수 포함
+        "total": total,
         "complaints": complaints
     }
 
@@ -236,18 +236,27 @@ def generate_reply(
 
     # === 답변 조립 ===
     fixed_header = (
-        "1. 평소 구정에 관심을 가져주신데 대해 감사드립니다.\n"
+    " 평소 구정에 관심을 가져주신데 대해 감사드립니다.\n")
+
+    fixed_summary = (
+        f" 귀하께서 요청하신 민원은 \"{complaint.summary}\"에 관한 것으로 이해됩니다.\n"
     )
 
     # 📌 여기에서 LLM 호출
     generated_core = generate_llm_reply(complaint.reply_summary)
 
     fixed_footer = (
-        f"3. 기타 궁금하신 사항은 {user_info.department}({user_info.name}, "
+        f" 기타 궁금하신 사항은 {user_info.department}({user_info.name}, "
         f"{user_info.contact})로 문의하여 주시면 성심껏 답변드리겠습니다. 감사합니다."
     )
 
-    reply_content = f"{fixed_header}{generated_core}\{fixed_footer}"
+    reply_content = {
+        "header": fixed_header,
+        "summary": fixed_summary,
+        "body": generated_core,
+        "footer": fixed_footer
+    }
+
 
     # DB 저장
     reply = Reply(
@@ -291,15 +300,19 @@ def generate_reply_again(
 
     # 답변 내용 재조립
     fixed_header = (
-        "1. 평소 구정에 관심을 가져주신데 대해 감사드립니다.\n"
+    " 평소 구정에 관심을 가져주신데 대해 감사드립니다.\n"
+    )
+    fixed_summary = (
+        f" 귀하께서 요청하신 민원은 \"{complaint.summary}\"에 관한 것으로 이해됩니다.\n"
     )
     fixed_footer = (
-        f"3. 기타 궁금하신 사항은 {user_info.department}({user_info.name}, "
+        f" 기타 궁금하신 사항은 {user_info.department}({user_info.name}, "
         f"{user_info.contact})로 문의하여 주시면 성심껏 답변드리겠습니다. 감사합니다."
     )
     generated_core = generate_llm_reply(complaint.reply_summary)
     reply_content = {
         "header": fixed_header,
+        "summary": fixed_summary,
         "body": generated_core,
         "footer": fixed_footer
     }
@@ -528,24 +541,24 @@ def get_similar_histories(
         raise HTTPException(status_code=400, detail="민원요약이 비어 있어 검색이 불가능합니다.")
 
     # 2. 공개된 히스토리 중 유사 민원 검색
-    sql = text("""
-        SELECT title, reply_summary, reply_content
-        FROM complaint_history
-        WHERE is_public = TRUE
-          AND reply_summary IS NOT NULL
-          AND to_tsvector('simple', LOWER(reply_summary::text)) @@ websearch_to_tsquery('simple', :query)
-        ORDER BY ts_rank(to_tsvector('simple', LOWER(reply_summary::text)), websearch_to_tsquery('simple', :query)) DESC
-        LIMIT 10
-    """)
+    # sql = text("""
+    #     SELECT title, reply_summary, reply_content
+    #     FROM complaint_history
+    #     WHERE is_public = TRUE
+    #       AND reply_summary IS NOT NULL
+    #       AND to_tsvector('simple', LOWER(reply_summary::text)) @@ websearch_to_tsquery('simple', :query)
+    #     ORDER BY ts_rank(to_tsvector('simple', LOWER(reply_summary::text)), websearch_to_tsquery('simple', :query)) DESC
+    #     LIMIT 10
+    # """)
     
-#     sql = text("""
-#     SELECT title, reply_summary, reply_content
-#     FROM complaint_history
-#     WHERE is_public = TRUE
-#       AND reply_summary IS NOT NULL
-#     ORDER BY created_at DESC
-#     LIMIT 10
-# """)
+    sql = text("""
+    SELECT title, summary, reply_content
+    FROM complaint_history
+    WHERE is_public = TRUE
+      AND summary IS NOT NULL
+    ORDER BY created_at DESC
+    LIMIT 2
+""")
     
 
     try:
@@ -559,7 +572,7 @@ def get_similar_histories(
     return [
         {
             "title": row.title,
-            "reply_summary": row.reply_summary,
+            "summary": row.summary,
             "content": row.reply_content
         }
         for row in rows

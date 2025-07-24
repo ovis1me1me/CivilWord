@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import './UserInfo.css';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { fetchUserInfo, updateUserInfo } from '../utils/api'; // updateUserInfo도 미리 임포트
 
 function UserInfo() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = location.state?.from || '/upload_excel';
 
   const [form, setForm] = useState({
     name: '',
@@ -40,7 +42,7 @@ function UserInfo() {
     try {
       await updateUserInfo(form);
       alert('유저 정보가 성공적으로 수정되었습니다!');
-      navigate('/upload_excel');
+      navigate(from); // 이전 경로로 이동
     } catch (error) {
       console.error('유저 정보 수정 실패:', error);
       alert('정보 수정에 실패했습니다. 다시 시도해주세요.');

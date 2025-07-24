@@ -53,7 +53,8 @@ function UploadExcel() {
 
         <div className="upload-box">
           <label htmlFor="excel-upload" className="upload-label">
-            <img src={file} alt="파일 아이콘" /> Excel 파일 삽입
+            <img src={file} alt="파일 아이콘" />
+            {!fileName && <span> Excel 파일 삽입</span>}
           </label>
           <input
             id="excel-upload"

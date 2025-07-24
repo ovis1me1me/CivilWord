@@ -8,6 +8,12 @@
   font-family: 'Noto Sans KR', sans-serif;
 }
 
+.find-id-title {
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 20px;
+}
+
 .find-id-form,
 .find-id-result {
   width: 100%;

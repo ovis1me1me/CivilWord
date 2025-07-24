@@ -45,6 +45,7 @@ function ResetPassword({ userId, question }) {
       <button onClick={handleReset}>비밀번호 재설정</button>
       {message && <p className="success">{message}</p>}
       {error && <p className="error">{error}</p>}
+      <button onClick={() => (window.location.href = '/Login')}>로그인 하러가기</button>
     </div>
   );
 }
