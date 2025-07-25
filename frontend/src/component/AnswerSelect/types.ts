@@ -15,10 +15,10 @@ export interface ContentBlock {
 
 // 하나의 완전한 답변 템플릿 전체
 export interface FullAnswer {
-  greeting: string;
-  complaintSummary: string;
-  contentBlocks: ContentBlock[];
-  closing: string;
+  header: string;
+  summary: string;
+  body: ContentBlock[];
+  footer: string;
 }
 
 // --- 👇 [추가] 헬퍼 함수들 ---
