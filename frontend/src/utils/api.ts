@@ -100,9 +100,13 @@ export const saveReplySummary = (id: number, payload: {
   return instance.post(`/complaints/${id}/reply-summary`, payload);
 };
 
-/** ✅ 11️. 답변 요지 수정 */
-export const updateReplySummary = (id: number, summary: string) =>
-  instance.put(`/complaints/${id}/reply-summary`, { summary });
+// /** ✅ 11️. 답변 요지 수정 */
+// export const updateReplySummary = (id: number, summary: string) =>
+//   instance.put(`/complaints/${id}/reply-summary`, { summary });
+
+/** ✅ 11-대체. 최종 답변 내용 수정 */
+export const updateReplyContent = (id: number, content: object) =>
+  instance.put(`/complaints/${id}/reply`, content);
 
 /** ✅ 12️. 유사 답변 추천 */
 export const fetchSimilarReplies = (id: number) =>
@@ -116,7 +120,7 @@ export const updateReplyStatus = (
 
 /** ✅ 14. 선택한 민원을 히스토리로 이동 */
 export const moveToHistory = (ids: number[]) =>
-  instance.post('/complaints/move-to-history', null, {  // ✅ body 없이
+  instance.post('/complaints/move-to-history', null, {  // ✅ body 없이
     params: { ids: ids.join(',') },
   });
 
@@ -139,6 +143,13 @@ export const fetchAllRepliesAdmin = () =>
 // ✅ 18. 히스토리 상세 조회
 export const fetchHistoryDetail = (id: number) =>
   instance.get(`/complaints/history/${id}`);
+
+/** ✅ 19. 유사 민원 히스토리 조회 */ // ✅ 새로 추가된 부분
+export const fetchSimilarHistories = async (id: number) => {
+  const response = await instance.get(`/complaints/${id}/history-similar`);
+  return response.data;
+};
+
 
 /** ✅ 기본 axios 인스턴스 export */
 export default instance;
