@@ -1,6 +1,6 @@
 import React from 'react';
 
-// --- 타입 정의 (실제 프로젝트에 맞게 수정하세요) ---
+// --- 타입 정의 ---
 interface Section {
   id: string;
   text: string;
@@ -13,10 +13,10 @@ interface ContentBlock {
 }
 
 interface FullAnswer {
-  greeting: string;
-  complaintSummary: string;
-  contentBlocks: ContentBlock[];
-  closing: string;
+  header: string;
+  summary: string;
+  body: ContentBlock[];
+  footer: string;
 }
 
 // --- 새로운 블록/섹션 생성을 위한 헬퍼 함수 ---
@@ -47,34 +47,32 @@ export default function AnswerBox({ content, onChange, isEditing, onEdit }: Prop
     onChange(newContent);
   };
 
-  const handleFieldChange = (field: 'greeting' | 'complaintSummary' | 'closing', value: string) => {
+  const handleFieldChange = (field: 'header' | 'summary' | 'footer', value: string) => {
     updateContent(draft => { draft[field] = value; });
   };
 
-  const addBlock = () => updateContent(draft => { draft.contentBlocks.push(createNewBlock()); });
+  const addBlock = () => updateContent(draft => { draft.body.push(createNewBlock()); });
   
-  const removeBlock = (blockIndex: number) => updateContent(draft => { draft.contentBlocks.splice(blockIndex, 1); });
+  const removeBlock = (blockIndex: number) => updateContent(draft => { draft.body.splice(blockIndex, 1); });
 
   const handleBlockTitleChange = (blockIndex: number, value: string) => {
-    updateContent(draft => { draft.contentBlocks[blockIndex].title = value; });
+    updateContent(draft => { draft.body[blockIndex].title = value; });
   };
 
-  const addSection = (blockIndex: number) => updateContent(draft => { draft.contentBlocks[blockIndex].sections.push(createNewSection()); });
+  const addSection = (blockIndex: number) => updateContent(draft => { draft.body[blockIndex].sections.push(createNewSection()); });
   
-  const removeSection = (blockIndex: number, sectionIndex: number) => updateContent(draft => { draft.contentBlocks[blockIndex].sections.splice(sectionIndex, 1); });
+  const removeSection = (blockIndex: number, sectionIndex: number) => updateContent(draft => { draft.body[blockIndex].sections.splice(sectionIndex, 1); });
   
   const handleSectionTextChange = (blockIndex: number, sectionIndex: number, value: string) => {
-    updateContent(draft => { draft.contentBlocks[blockIndex].sections[sectionIndex].text = value; });
+    updateContent(draft => { draft.body[blockIndex].sections[sectionIndex].text = value; });
   };
 
-  // '가', '나', '다' 와 같은 라벨을 생성하는 함수
   const getSectionLabel = (index: number) => `${'가나다라마바사아자차카타파하'[index]}.`;
 
   if (!content) {
     return <div className="p-4 bg-gray-100 rounded-2xl">답변 내용이 없습니다.</div>;
   }
 
-  // 섹션 번호를 관리하기 위한 변수
   let sectionNumber = 1;
 
   return (
@@ -88,14 +86,14 @@ export default function AnswerBox({ content, onChange, isEditing, onEdit }: Prop
         </div>
       )}
 
-      {/* 1. 인사말 */}
+      {/* 1. 인사말 (header) */}
       <div className="flex items-start space-x-3">
         <span className="text-lg font-bold text-gray-800 pt-3">{sectionNumber++}.</span>
         <div className="flex-1">
           <SectionCard>
             <CustomTextarea
-              value={content.greeting}
-              onChange={e => handleFieldChange('greeting', e.target.value)}
+              value={content.header}
+              onChange={e => handleFieldChange('header', e.target.value)}
               disabled={!isEditing}
               placeholder="인사말을 입력하세요."
             />
@@ -103,14 +101,14 @@ export default function AnswerBox({ content, onChange, isEditing, onEdit }: Prop
         </div>
       </div>
 
-      {/* 2. 민원요지 */}
+      {/* 2. 민원요지 (summary) */}
       <div className="flex items-start space-x-3">
         <span className="text-lg font-bold text-gray-800 pt-3">{sectionNumber++}.</span>
         <div className="flex-1">
           <SectionCard>
             <CustomTextarea
-              value={content.complaintSummary}
-              onChange={e => handleFieldChange('complaintSummary', e.target.value)}
+              value={content.summary}
+              onChange={e => handleFieldChange('summary', e.target.value)}
               disabled={!isEditing}
               placeholder="민원 요지를 입력하세요."
             />
@@ -118,8 +116,8 @@ export default function AnswerBox({ content, onChange, isEditing, onEdit }: Prop
         </div>
       </div>
 
-      {/* 3. 답변 본문 블록 */}
-      {content.contentBlocks.map((block, blockIndex) => (
+      {/* 3. 답변 본문 블록 (body) */}
+      {content.body.map((block, blockIndex) => (
         <div key={block.id || blockIndex} className="flex items-start space-x-3">
           <span className="text-lg font-bold text-gray-800 pt-4">{sectionNumber + blockIndex}.</span>
           <div className="flex-1 p-4 bg-white rounded-xl border-l-4 border-blue-500 shadow space-y-3">
@@ -177,14 +175,14 @@ export default function AnswerBox({ content, onChange, isEditing, onEdit }: Prop
         </button>
       )}
 
-      {/* 4. 끝맺음 */}
+      {/* 4. 끝맺음 (footer) */}
       <div className="flex items-start space-x-3">
-        <span className="text-lg font-bold text-gray-800 pt-3">{sectionNumber + content.contentBlocks.length}.</span>
+        <span className="text-lg font-bold text-gray-800 pt-3">{sectionNumber + content.body.length}.</span>
         <div className="flex-1">
           <SectionCard>
             <CustomTextarea
-              value={content.closing}
-              onChange={e => handleFieldChange('closing', e.target.value)}
+              value={content.footer}
+              onChange={e => handleFieldChange('footer', e.target.value)}
               disabled={!isEditing}
               placeholder="마무리 멘트를 입력하세요."
             />

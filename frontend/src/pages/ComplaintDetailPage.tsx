@@ -11,6 +11,7 @@ import {
   fetchComplaintSummary,
   saveReplySummary,
   generateReply,
+  fetchSimilarHistories, // 새로 추가된 API 함수 임포트
 } from '../utils/api';
 
 export default function ComplaintDetailPage() {
@@ -21,14 +22,10 @@ export default function ComplaintDetailPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 더미
-  const [similarAnswersList, setSimilarAnswersList] = useState<string[][][]>([
-    [
-      ['도로 정비 요청 완료', '이관 완료', '유사 민원 답변'],
-      ['정비는 3일 내 착수 예정', '추가 민원은 필요 없음'],
-      ['유사 민원 답변', '유사 민원 답변'],
-    ],
-  ]);
+  // similarAnswersList의 타입을 백엔드 반환 형식에 맞게 수정합니다.
+  const [similarAnswersList, setSimilarAnswersList] = useState<
+    { title: string; summary: string; content: string }[]
+  >([]);
 
   const answerContainerRef = useRef<HTMLDivElement>(null);
   const [answerHeight, setAnswerHeight] = useState(0);
@@ -44,19 +41,14 @@ export default function ComplaintDetailPage() {
       try {
         const numericId = parseInt(id, 10);
 
-        const [complaintRes, summaryRes] = await Promise.all([
+        const [complaintRes, summaryRes, similarHistoryRes] = await Promise.all([ // 유사 민원 이력 API 호출 추가
           fetchComplaintDetail(numericId),
           fetchComplaintSummary(numericId),
+          fetchSimilarHistories(numericId), // 유사 민원 이력 호출
         ]);
-
-        // const isGarbage = (text: string) => {
-        //   const t = text.trim();
-        //   return t === '';
-        // };
 
         const complaintData = complaintRes.data;
         const summary = summaryRes.data.summary || '';
-        // const replySummaryRaw = complaintData.reply_summary || '';
         const replySummary = '';
 
         setComplaint({
@@ -67,9 +59,13 @@ export default function ComplaintDetailPage() {
           answerSummary: replySummary,
         });
 
+        // 유사 민원 이력 데이터를 상태에 저장합니다.
+        setSimilarAnswersList(similarHistoryRes); 
+
         setAnswerBlocks([{ summaryTitle: replySummary, answerOptions: ['', '', ''] }]);
       } catch (err) {
-        console.error('민원 상세 조회 실패:', err);
+        console.error('데이터 조회 실패:', err); // 에러 메시지를 일반화
+        // 필요에 따라 사용자에게 알림
       } finally {
         setIsLoading(false);
       }
@@ -155,68 +151,68 @@ export default function ComplaintDetailPage() {
 
   // 답변 생성
   const handleGenerateAnswer = async () => {
-    if (!id) return;
+    if (!id) return;
 
-    const hasAtLeastOneFilled = answerBlocks.some(
-      (block) => block.summaryTitle.trim() !== ''
-    );
+    const hasAtLeastOneFilled = answerBlocks.some(
+      (block) => block.summaryTitle.trim() !== ''
+    );
 
-    if (!hasAtLeastOneFilled) {
-      alert('최소 하나 이상의 답변 요지를 입력해야 합니다.');
-      return;
-    }
+    if (!hasAtLeastOneFilled) {
+      alert('최소 하나 이상의 답변 요지를 입력해야 합니다.');
+      return;
+    }
 
-    setIsGenerating(true);
+    setIsGenerating(true);
 
-    try {
-      const numericId = parseInt(id, 10);
+    try {
+      const numericId = parseInt(id, 10);
 
-      // Define the labels array here
-      const labels = ['가', '나', '다', '라', '마', '바', '사', '아', '자', '차', '카', '타', '파', '하'];
+      // Define the labels array here
+      const labels = ['가', '나', '다', '라', '마', '바', '사', '아', '자', '차', '카', '타', '파', '하'];
 
-      // Construct the payload
-      const payload = {
-        answer_summary: answerBlocks
-          .map((block) => {
-            const filledOptions = block.answerOptions.filter(
-              (opt) => opt.trim() !== ''
-            );
+      // Construct the payload
+      const payload = {
+        answer_summary: answerBlocks
+          .map((block) => {
+            const filledOptions = block.answerOptions.filter(
+              (opt) => opt.trim() !== ''
+            );
 
-            if (block.summaryTitle.trim() === '' || filledOptions.length === 0) {
-              return null;
-            }
+            if (block.summaryTitle.trim() === '' || filledOptions.length === 0) {
+              return null;
+            }
 
-            return {
-              index: block.summaryTitle, // 'review'를 'index'로 변경
-              section: filledOptions.map((opt, index) => ({ // 'sections'를 'section'으로 변경
-                title: labels[index] || '',
-                text: opt,
-              })),
-            };
-          })
-          .filter(
-            (item): item is { index: string; section: { title: string; text: string }[] } => item !== null // 타입 단언도 수정
-          ),
-      };
+            return {
+              index: block.summaryTitle, // 'review'를 'index'로 변경
+              section: filledOptions.map((opt, index) => ({ // 'sections'를 'section'으로 변경
+                title: labels[index] || '',
+                text: opt,
+              })),
+            };
+          })
+          .filter(
+            (item): item is { index: string; section: { title: string; text: string }[] } => item !== null // 타입 단언도 수정
+          ),
+      };
 
-      console.log('보내는 payload:', JSON.stringify(payload, null, 2));
-      // 답변 요지 저장
-      await saveReplySummary(numericId, payload);
+      console.log('보내는 payload:', JSON.stringify(payload, null, 2));
+      // 답변 요지 저장
+      await saveReplySummary(numericId, payload);
 
-      // 2) 답변 1회 생성 API 호출 (JWT 인증 필요)
-      const replyResponse = await generateReply(numericId, payload);
-      console.log('생성된 답변:', replyResponse.data);
+      // 2) 답변 1회 생성 API 호출 (JWT 인증 필요)
+      const replyResponse = await generateReply(numericId, payload);
+      console.log('생성된 답변:', replyResponse.data);
 
-      navigate(`/complaints/${id}/select-answer`, {
-        state: { summaries: answerBlocks.map((block) => block.summaryTitle) },
-      });
-    } catch (error) {
-      console.error('답변 요지 저장 실패:', error);
-      alert('답변 요지 저장 중 오류가 발생했습니다.');
-    } finally {
-      setIsGenerating(false);
-    }
-  };
+      navigate(`/complaints/${id}/select-answer`, {
+        state: { summaries: answerBlocks.map((block) => block.summaryTitle) },
+      });
+    } catch (error) {
+      console.error('답변 요지 저장 실패:', error);
+      alert('답변 요지 저장 중 오류가 발생했습니다.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   if (isLoading || !complaint) {
     return <Spinner />;
@@ -230,9 +226,10 @@ export default function ComplaintDetailPage() {
         <ContentBox label="민원 요지" content={complaint.summary} />
 
         <div className="grid grid-cols-2 gap-6 max-w-[1000px] mx-auto p-4">
+          {/* similarAnswersList를 그대로 전달합니다. */}
           <SimilarAnswersBlock
             index={0}
-            similarAnswers={similarAnswersList[0] || []}
+            similarAnswers={similarAnswersList} 
             containerHeight={answerHeight}
           />
 
