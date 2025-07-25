@@ -77,7 +77,7 @@ export const generateReply = (id: number, answerSummary: object) =>
 export const regenerateReply = (id: number) =>
   instance.post(`/complaints/${id}/generate-reply-again`);
 
-/** ✅ 7️. 민원 답변 목록 조회 (답변 3가지) */
+/** ✅ 7️. 생성된 답변 조회 (답변 3가지) */
 export const fetchReplies = (id: number) =>
   instance.get(`/complaints/${id}/replies`);
 
@@ -105,8 +105,8 @@ export const saveReplySummary = (id: number, payload: {
 //   instance.put(`/complaints/${id}/reply-summary`, { summary });
 
 /** ✅ 11-대체. 최종 답변 내용 수정 */
-export const updateReplyContent = (id: number, content: object) =>
-  instance.put(`/complaints/${id}/reply`, content);
+export const updateReplyContent = (complaint_id: number, content: object) =>
+  instance.put(`/complaints/${complaint_id}/reply`, content);
 
 /** ✅ 12️. 유사 답변 추천 */
 export const fetchSimilarReplies = (id: number) =>

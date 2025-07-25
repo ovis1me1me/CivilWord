@@ -1,35 +1,31 @@
 import pandas as pd
-import io
-from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
-from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
-from sqlalchemy import text
-from typing import List, Optional
-
-from app.database import SessionLocal
-from app.auth import get_current_user
+import io 
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request, Body
+from sqlalchemy import Column, Integer, JSON  # 또는 JSONB (PostgreSQL)
+# 7/21 ComplaintResponse, ComplaintCreate 추가
+from app.schemas.complaint import ComplaintListResponse, FullReplySummaryResponse, ReplySummaryUpdateRequest, ComplaintResponse, ComplaintCreate
+from app.schemas.reply import ReplyBase
 from app.models.complaint import Complaint
 from app.models.reply import Reply
-from app.models.user import User
-from app.models import UserInfo
-from app.models.complaint_history import ComplaintHistory
-
-from app.schemas.complaint import (
-    ComplaintListResponse, ComplaintResponse, ComplaintCreate,
-    ComplaintSummaryResponse, FullReplySummaryResponse,
-    ReplySummaryUpdateRequest, ReplySummaryRequest,
-    ReplyStatusUpdateRequest
-)
-from app.schemas.reply import ReplyBase
+from app.models.user import User 
+from app.models import UserInfo 
+from app.database import SessionLocal
+from typing import List, Optional
+from app.schemas.complaint import ComplaintSummaryResponse, ReplyStatusUpdateRequest
 from app.schemas.response_message import ResponseMessage
-
-from bllossom8b_infer.inference import generate_llm_reply
+from app.auth import get_current_user
+from datetime import datetime
+from fastapi.responses import StreamingResponse
+import pandas as pd
+from sqlalchemy import text
+import re
+from bllossom8b_infer.inference import generate_llm_reply  # 함수 임포트
 from blossom_summarizer.summarizer import summarize_with_blossom
-
 from typing import Any
-
-
+from sqlalchemy.orm import Session
+from app.schemas.complaint import ReplySummaryRequest
+from app.models.complaint_history import ComplaintHistory
+from fastapi import Body
 
 router = APIRouter()
 
@@ -152,7 +148,7 @@ def get_complaints(
     elif sort == "created_asc":
         complaints = query.order_by(Complaint.created_at.asc()).offset(skip).limit(limit).all()
     else:
-        complaints = query.offset(skip).limit(limit).all()
+        complaints = query.order_by(Complaint.created_at.desc()).offset(skip).limit(limit).all()
 
     return {
         "total": total,
@@ -338,7 +334,7 @@ def generate_reply_again(
 @router.put("/complaints/{complaint_id}/reply", response_model=ReplyBase)
 def update_reply(
     complaint_id: int,
-    content: Any,
+    content: Any=Body(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -541,24 +537,24 @@ def get_similar_histories(
         raise HTTPException(status_code=400, detail="민원요약이 비어 있어 검색이 불가능합니다.")
 
     # 2. 공개된 히스토리 중 유사 민원 검색
-    # sql = text("""
-    #     SELECT title, reply_summary, reply_content
-    #     FROM complaint_history
-    #     WHERE is_public = TRUE
-    #       AND reply_summary IS NOT NULL
-    #       AND to_tsvector('simple', LOWER(reply_summary::text)) @@ websearch_to_tsquery('simple', :query)
-    #     ORDER BY ts_rank(to_tsvector('simple', LOWER(reply_summary::text)), websearch_to_tsquery('simple', :query)) DESC
-    #     LIMIT 10
-    # """)
-    
     sql = text("""
-    SELECT title, summary, reply_content
-    FROM complaint_history
-    WHERE is_public = TRUE
-      AND summary IS NOT NULL
-    ORDER BY created_at DESC
-    LIMIT 2
-""")
+        SELECT title, summary, reply_content
+        FROM complaint_history
+        WHERE is_public = TRUE
+          AND summary IS NOT NULL
+        ORDER BY created_at DESC
+        LIMIT 2
+    """)
+    result = db.execute(sql).fetchall()
+
+    # 빈 결과 처리
+    if not result:
+        return []
+
+    return [
+        {"title": row.title, "summary": row.summary, "content": row.reply_content}
+        for row in result
+    ]
     
 
     try:

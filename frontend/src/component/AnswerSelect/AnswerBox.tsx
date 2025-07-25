@@ -16,6 +16,7 @@ interface FullAnswer {
   summary: string;
   body: ContentBlock[];
   footer: string;
+}
 
 // --- 새로운 블록/섹션 생성을 위한 헬퍼 함수 ---
 const createNewSection = (): Section => ({
