@@ -1,6 +1,5 @@
 import React from 'react';
 
-// --- 타입 정의 ---
 interface Section {
   id: string;
   text: string;
@@ -17,7 +16,6 @@ interface FullAnswer {
   summary: string;
   body: ContentBlock[];
   footer: string;
-}
 
 // --- 새로운 블록/섹션 생성을 위한 헬퍼 함수 ---
 const createNewSection = (): Section => ({
@@ -67,12 +65,14 @@ export default function AnswerBox({ content, onChange, isEditing, onEdit }: Prop
     updateContent(draft => { draft.body[blockIndex].sections[sectionIndex].text = value; });
   };
 
+  // '가', '나', '다' 와 같은 라벨을 생성하는 함수
   const getSectionLabel = (index: number) => `${'가나다라마바사아자차카타파하'[index]}.`;
 
   if (!content) {
     return <div className="p-4 bg-gray-100 rounded-2xl">답변 내용이 없습니다.</div>;
   }
 
+  // 섹션 번호를 관리하기 위한 변수
   let sectionNumber = 1;
 
   return (
@@ -86,7 +86,7 @@ export default function AnswerBox({ content, onChange, isEditing, onEdit }: Prop
         </div>
       )}
 
-      {/* 1. 인사말 (header) */}
+      {/* 1. 인사말 */}
       <div className="flex items-start space-x-3">
         <span className="text-lg font-bold text-gray-800 pt-3">{sectionNumber++}.</span>
         <div className="flex-1">
@@ -101,7 +101,7 @@ export default function AnswerBox({ content, onChange, isEditing, onEdit }: Prop
         </div>
       </div>
 
-      {/* 2. 민원요지 (summary) */}
+      {/* 2. 민원요지 */}
       <div className="flex items-start space-x-3">
         <span className="text-lg font-bold text-gray-800 pt-3">{sectionNumber++}.</span>
         <div className="flex-1">
@@ -115,7 +115,7 @@ export default function AnswerBox({ content, onChange, isEditing, onEdit }: Prop
           </SectionCard>
         </div>
       </div>
-
+      
       {/* 3. 답변 본문 블록 (body) */}
       {content.body.map((block, blockIndex) => (
         <div key={block.id || blockIndex} className="flex items-start space-x-3">
@@ -174,7 +174,7 @@ export default function AnswerBox({ content, onChange, isEditing, onEdit }: Prop
           + 답변 검토 블록 추가
         </button>
       )}
-
+      
       {/* 4. 끝맺음 (footer) */}
       <div className="flex items-start space-x-3">
         <span className="text-lg font-bold text-gray-800 pt-3">{sectionNumber + content.body.length}.</span>

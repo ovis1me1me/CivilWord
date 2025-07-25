@@ -1,32 +1,33 @@
 import pandas as pd
-import io 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request, Body
-from sqlalchemy import Column, Integer, JSON  # 또는 JSONB (PostgreSQL)
-# 7/21 ComplaintResponse, ComplaintCreate 추가
-from app.schemas.complaint import ComplaintListResponse, FullReplySummaryResponse, ReplySummaryUpdateRequest, ComplaintResponse, ComplaintCreate
-from app.schemas.reply import ReplyBase
+import io
+from datetime import datetime
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi.responses import StreamingResponse
+from sqlalchemy.orm import Session
+from sqlalchemy import text
+from typing import List, Optional
+
+from app.database import SessionLocal
+from app.auth import get_current_user
 from app.models.complaint import Complaint
 from app.models.reply import Reply
-from app.models.user import User 
-from app.models import UserInfo 
-from app.database import SessionLocal
-from typing import List, Optional
-from app.schemas.complaint import ComplaintSummaryResponse, ReplyStatusUpdateRequest
-from app.schemas.response_message import ResponseMessage
-from app.auth import get_current_user
-from datetime import datetime
-from fastapi.responses import StreamingResponse
-import pandas as pd
-from sqlalchemy import text
-import re
-from bllossom8b_infer.inference import generate_llm_reply  # 함수 임포트
-from blossom_summarizer.summarizer import summarize_with_blossom
-from typing import Any
-from sqlalchemy.orm import Session
-from app.schemas.complaint import ReplySummaryRequest
+from app.models.user import User
+from app.models import UserInfo
 from app.models.complaint_history import ComplaintHistory
 
+from app.schemas.complaint import (
+    ComplaintListResponse, ComplaintResponse, ComplaintCreate,
+    ComplaintSummaryResponse, FullReplySummaryResponse,
+    ReplySummaryUpdateRequest, ReplySummaryRequest,
+    ReplyStatusUpdateRequest
+)
+from app.schemas.reply import ReplyBase
+from app.schemas.response_message import ResponseMessage
 
+from bllossom8b_infer.inference import generate_llm_reply
+from blossom_summarizer.summarizer import summarize_with_blossom
+
+from typing import Any
 
 
 
@@ -40,7 +41,9 @@ def get_db():
     finally:
         db.close()
 
-# ✅ 1. 엑셀 업로드 라우터 (동적 URL보다 먼저 등록)
+
+#1. 엑셀 업로드 라우터 (동적 URL보다 먼저 등록)
+# [complaint]에 민원요약, 답변요약 비우고 저장
 @router.post("/complaints/upload-excel", response_model=ResponseMessage)
 async def upload_complaints_excel(
     file: UploadFile = File(...),
@@ -84,6 +87,8 @@ async def upload_complaints_excel(
     db.commit()
     return ResponseMessage(message=f"{len(df)}건의 민원이 등록되었습니다.")
 
+# 2. 엑셀 다운로드 라우터 
+# [complaint]의 민원 관련 내용 및 [reply]의 답변 내용 엑셀로 추출
 @router.get("/complaints/download-excel")
 def download_complaints_excel(
     ids: str,
@@ -127,7 +132,10 @@ def download_complaints_excel(
         headers={"Content-Disposition": "attachment; filename=complaints.xlsx"}
     )
 
-@router.get("/complaints", response_model=ComplaintListResponse)
+
+# 3. 민원 목록 반환 라우터
+# 해당 유저 [complaint] 민원 목록 반환
+@router.get("/complaints", response_model=ComplaintListResponse) 
 def get_complaints(
     db: Session = Depends(get_db), 
     sort: Optional[str] = None,
@@ -151,8 +159,8 @@ def get_complaints(
         "complaints": complaints
     }
 
-
-# 7/21 추가
+# 4. 민원 반환 라우터
+# id 에 맞는 [complaint] 데이터 반환
 @router.get("/complaints/{id}", response_model=ComplaintResponse)
 def get_complaint_by_id(
     id: int,
@@ -169,6 +177,8 @@ def get_complaint_by_id(
 
     return complaint
 
+# 5. 민원 삭제
+# 해당하는 [complaint] 및 [reply] 데이터 삭제
 @router.delete("/complaints/{id}", response_model=ResponseMessage)
 def delete_complaint(
     id: int,
@@ -194,7 +204,8 @@ def delete_complaint(
 
     return ResponseMessage(message=f"민원 {id}번과 관련된 답변 및 요약이 모두 삭제되었습니다.")
 
-#민원응답 
+# 6. 답변 생성(LLM) 라우터 
+# [complaint]의 reply_summary를 input하여 [reply] 데이터 생성
 @router.post("/complaints/{id}/generate-reply", response_model=ReplyBase)
 def generate_reply(
     id: int,
@@ -260,7 +271,8 @@ def generate_reply(
 
     return reply
 
-# 답변 재생산(본인 것만)
+# 7. 답변 재생산(LLM) 라우터 
+# 기존 [reply]데이터 삭제 후, [complaint]의 reply_summary를 input하여 [reply] 데이터 생성
 @router.post("/complaints/{id}/generate-reply-again", response_model=ReplyBase)
 def generate_reply_again(
     id: int, 
@@ -321,15 +333,8 @@ def generate_reply_again(
 
     return new_reply
 
-# 관리자용 응답 조회
-@router.get("/admin/replies", response_model=List[ReplyBase])
-def get_all_replies(
-    db: Session = Depends(get_db)
-):
-    replies = db.query(Reply).all()
-    return replies
-
-# 응답 수정(컴플레인 아이디로 )
+# 8. 응답 수정(컴플레인 아이디로 )
+# 기록된 [reply]의 content 수정
 @router.put("/complaints/{complaint_id}/reply", response_model=ReplyBase)
 def update_reply(
     complaint_id: int,
@@ -360,7 +365,9 @@ def update_reply(
 
     return reply
 
-# 응답 검색(컴플레인 아이디로 )
+# 9. 답변 검색(컴플레인 아이디로)
+# 해당하는 [reply] 반환
+#수정할까말까 -> 현재 하나만 반환해도 되는
 @router.get("/complaints/{id}/replies", response_model=List[ReplyBase])
 def get_replies(
     id: int,
@@ -386,7 +393,18 @@ def get_replies(
 
     return replies
 
+# 8. 관리자용 답변 조회
+# 모든 유저의 답변 반환
+@router.get("/admin/replies", response_model=List[ReplyBase])
+def get_all_replies(
+    db: Session = Depends(get_db)
+):
+    replies = db.query(Reply).all()
+    return replies
 
+
+# 9. 민원 요약(LLM) 라우터(없으면 생성 후 반환)
+#[complaint]의 content를 input하여  LLM모델로 summary 생성
 @router.get("/complaints/{id}/summary", response_model=ComplaintSummaryResponse)
 def get_complaint_summary(
     id: int,
@@ -417,7 +435,8 @@ def get_complaint_summary(
     )
 
 
-
+# 10. 답변 요약 호출 라우터 
+# [complaint] id 기준으로 답변 요약, 제목, 민원 반환
 @router.get("/complaints/{id}/reply-summary", response_model=ComplaintSummaryResponse)
 def get_reply_summary(
     id: int,
