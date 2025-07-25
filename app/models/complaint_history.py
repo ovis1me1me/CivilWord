@@ -10,7 +10,7 @@ class ComplaintHistory(Base):
     id = Column(Integer, primary_key=True, index=True)  # PK
     user_uid = Column(String, ForeignKey("user.user_uid"), index=True)
     
-    title = Column(String)
+    title = Column(String) 
     content = Column(Text)
     is_public = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -20,3 +20,5 @@ class ComplaintHistory(Base):
     reply_status = Column(String, default="답변전")
 
     moved_at = Column(DateTime, default=datetime.utcnow) 
+
+#유사민원 라우터에서 같이 반환 민원요지, 답변

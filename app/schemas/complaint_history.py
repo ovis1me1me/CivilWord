@@ -25,3 +25,12 @@ class HistorySimpleContent(BaseModel):
 
     class Config:
         orm_mode = True
+
+
+class ReplyBase(BaseModel):
+    id: int
+    complaint_id: int
+    created_at: datetime
+    title: str
+    summary: str
+    content: str

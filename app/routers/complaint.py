@@ -24,6 +24,8 @@ from blossom_summarizer.summarizer import summarize_with_blossom
 from typing import Any
 from sqlalchemy.orm import Session
 from app.schemas.complaint import ReplySummaryRequest
+from app.models.complaint_history import ComplaintHistory
+
 
 
 
@@ -125,8 +127,7 @@ def download_complaints_excel(
         headers={"Content-Disposition": "attachment; filename=complaints.xlsx"}
     )
 
-@router.get("/complaints", response_model=ComplaintListResponse) #수정함
-
+@router.get("/complaints", response_model=ComplaintListResponse)
 def get_complaints(
     db: Session = Depends(get_db), 
     sort: Optional[str] = None,
@@ -136,19 +137,20 @@ def get_complaints(
 ):
     query = db.query(Complaint).filter(Complaint.user_uid == current_user.user_uid)
 
-    total = query.count() 
+    total = query.count()
 
-    if sort == "created":
+    if sort == "created_desc":
         complaints = query.order_by(Complaint.created_at.desc()).offset(skip).limit(limit).all()
-
-
+    elif sort == "created_asc":
+        complaints = query.order_by(Complaint.created_at.asc()).offset(skip).limit(limit).all()
     else:
         complaints = query.offset(skip).limit(limit).all()
 
     return {
-        "total": total,          #  전체 개수 포함
+        "total": total,
         "complaints": complaints
     }
+
 
 # 7/21 추가
 @router.get("/complaints/{id}", response_model=ComplaintResponse)
@@ -223,18 +225,27 @@ def generate_reply(
 
     # === 답변 조립 ===
     fixed_header = (
-        "1. 평소 구정에 관심을 가져주신데 대해 감사드립니다.\n"
+    " 평소 구정에 관심을 가져주신데 대해 감사드립니다.\n")
+
+    fixed_summary = (
+        f" 귀하께서 요청하신 민원은 \"{complaint.summary}\"에 관한 것으로 이해됩니다.\n"
     )
 
     # 📌 여기에서 LLM 호출
     generated_core = generate_llm_reply(complaint.reply_summary)
 
     fixed_footer = (
-        f"3. 기타 궁금하신 사항은 {user_info.department}({user_info.name}, "
+        f" 기타 궁금하신 사항은 {user_info.department}({user_info.name}, "
         f"{user_info.contact})로 문의하여 주시면 성심껏 답변드리겠습니다. 감사합니다."
     )
 
-    reply_content = f"{fixed_header}{generated_core}\{fixed_footer}"
+    reply_content = {
+        "header": fixed_header,
+        "summary": fixed_summary,
+        "body": generated_core,
+        "footer": fixed_footer
+    }
+
 
     # DB 저장
     reply = Reply(
@@ -277,15 +288,19 @@ def generate_reply_again(
 
     # 답변 내용 재조립
     fixed_header = (
-        "1. 평소 구정에 관심을 가져주신데 대해 감사드립니다.\n"
+    " 평소 구정에 관심을 가져주신데 대해 감사드립니다.\n"
+    )
+    fixed_summary = (
+        f" 귀하께서 요청하신 민원은 \"{complaint.summary}\"에 관한 것으로 이해됩니다.\n"
     )
     fixed_footer = (
-        f"3. 기타 궁금하신 사항은 {user_info.department}({user_info.name}, "
+        f" 기타 궁금하신 사항은 {user_info.department}({user_info.name}, "
         f"{user_info.contact})로 문의하여 주시면 성심껏 답변드리겠습니다. 감사합니다."
     )
     generated_core = generate_llm_reply(complaint.reply_summary)
     reply_content = {
         "header": fixed_header,
+        "summary": fixed_summary,
         "body": generated_core,
         "footer": fixed_footer
     }
@@ -487,47 +502,79 @@ def save_reply_summary(
 
 
 
-@router.get("/complaints/{id}/history-similar", response_model=List[ReplyBase])
+@router.get("/complaints/{id}/history-similar", response_model=List[dict])
 def get_similar_histories(
     id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # 1. 민원 본문 가져오기
+    # 1. 본인 민원 확인 및 민원요약 추출
     complaint = db.query(Complaint).filter(
         Complaint.id == id,
         Complaint.user_uid == current_user.user_uid
     ).first()
+
     if not complaint:
         raise HTTPException(status_code=404, detail="해당 민원이 없거나 권한이 없습니다.")
 
-    # 2. 텍스트 전처리 (소문자화 + 특수문자 제거 + 토큰 제한)
-    raw_text = complaint.content[:300]
-    cleaned_text = re.sub(r"[^\w\s]", " ", raw_text)
-    tokens = cleaned_text.split()
-    query_text = " ".join(tokens[:10]).lower()
+    query_text = complaint.summary
+    if not query_text or not str(query_text).strip():
+        raise HTTPException(status_code=400, detail="민원요약이 비어 있어 검색이 불가능합니다.")
 
-    if not query_text.strip():
-        raise HTTPException(status_code=400, detail="검색어가 유효하지 않습니다.")
-
-    # 3. Full Text Search (websearch_to_tsquery 사용)
-    sql = text("""
-        SELECT urh.*
-        FROM user_reply_history urh
-        WHERE to_tsvector('simple', LOWER(final_content)) @@ websearch_to_tsquery('simple', :query)
-        ORDER BY ts_rank(to_tsvector('simple', LOWER(final_content)), websearch_to_tsquery('simple', :query)) DESC
-        LIMIT 10
-    """)
+    # 2. 공개된 히스토리 중 유사 민원 검색
+    # sql = text("""
+    #     SELECT title, reply_summary, reply_content
+    #     FROM complaint_history
+    #     WHERE is_public = TRUE
+    #       AND reply_summary IS NOT NULL
+    #       AND to_tsvector('simple', LOWER(reply_summary::text)) @@ websearch_to_tsquery('simple', :query)
+    #     ORDER BY ts_rank(to_tsvector('simple', LOWER(reply_summary::text)), websearch_to_tsquery('simple', :query)) DESC
+    #     LIMIT 10
+    # """)
     
+    sql = text("""
+    SELECT title, summary, reply_content
+    FROM complaint_history
+    WHERE is_public = TRUE
+      AND summary IS NOT NULL
+    ORDER BY created_at DESC
+    LIMIT 2
+""")
+    
+
     try:
         rows = db.execute(sql, {"query": query_text}).fetchall()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"FTS 실행 실패: {str(e)}")
 
     if not rows:
-        raise HTTPException(status_code=404, detail="유사한 민원이 없습니다.")
+        raise HTTPException(status_code=404, detail="유사한 공개 민원이 없습니다.")
 
-    return [{"content": row.final_content} for row in rows]
+    return [
+        {
+            "title": row.title,
+            "summary": row.summary,
+            "content": row.reply_content
+        }
+        for row in rows
+    ]
+
+@router.get("/admin/public-histories", response_model=List[ReplyBase])
+def get_public_histories(db: Session = Depends(get_db)):
+    histories = db.query(ComplaintHistory).filter(ComplaintHistory.is_public == True).limit(10).all()
+
+    return [
+        ReplyBase(
+            id=history.id,
+            complaint_id=history.id,  # 또는 연결된 complaint_id가 따로 있으면 그것으로 대체
+            created_at=history.created_at,
+            title=history.title,
+            summary=history.summary or "",
+            content=history.reply_content or ""
+        )
+        for history in histories
+    ]
+
 
 
 @router.put("/complaints/{id}/reply-status", response_model=ResponseMessage)

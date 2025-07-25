@@ -56,8 +56,8 @@ class Section(BaseModel):
     text: str
 
 class AnswerSummaryItem(BaseModel):
-    review: str
-    sections: List[Section]
+    index: str
+    section: List[Section]
 
 class ReplySummaryRequest(BaseModel):
     answer_summary: List[AnswerSummaryItem]

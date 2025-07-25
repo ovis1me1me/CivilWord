@@ -7,8 +7,8 @@ interface AnswerSection {
 }
 
 interface AnswerSummaryBlock {
-  review: string;
-  sections: AnswerSection[];
+  index: string;
+  section: AnswerSection[];
 }
 
 interface Props {
@@ -43,8 +43,8 @@ export default function RightPanel({
           <AnswerBlock
             key={index}
             index={index}
-            summaryTitle={block.review}
-            answerOptions={block.sections.map(sec => sec.text)}
+            summaryTitle={block.index}
+            answerOptions={block.section.map(sec => sec.text)}
             onSummaryChange={(value) => onReviewChange(index, value)}
             onAnswerChange={(sectionIndex, value) => onSectionChange(index, sectionIndex, value)}
             onAddAnswer={() => onAddSection(index)}

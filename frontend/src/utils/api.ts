@@ -93,8 +93,8 @@ export const fetchReplySummary = (id: number) =>
 export const saveReplySummary = (id: number, payload: {
   //complaint_summary: string;
   answer_summary: {
-    review: string;
-    sections: { title: string; text: string }[];
+    index: string;
+    section: { title: string; text: string }[];
   }[];
 }) => {
   return instance.post(`/complaints/${id}/reply-summary`, payload);
