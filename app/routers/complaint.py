@@ -27,6 +27,14 @@ from app.schemas.complaint import ReplySummaryRequest
 from app.models.complaint_history import ComplaintHistory
 from fastapi import Body
 
+from app.models.similar_history import SimilarHistory
+import json
+
+# 로그 전용
+import logging
+logger = logging.getLogger(__name__)  
+logging.basicConfig(level=logging.INFO)
+
 router = APIRouter()
 
 # DB 세션 의존성 주입
@@ -517,62 +525,53 @@ def save_reply_summary(
 
 
 
-@router.get("/complaints/{id}/history-similar", response_model=List[dict])
+@router.get("/complaints/{id}/history-similar", response_model=list[dict])
 def get_similar_histories(
     id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # 1. 본인 민원 확인 및 민원요약 추출
+    # 1. 본인 민원 확인
     complaint = db.query(Complaint).filter(
         Complaint.id == id,
         Complaint.user_uid == current_user.user_uid
     ).first()
-
     if not complaint:
         raise HTTPException(status_code=404, detail="해당 민원이 없거나 권한이 없습니다.")
 
-    query_text = complaint.summary
-    if not query_text or not str(query_text).strip():
-        raise HTTPException(status_code=400, detail="민원요약이 비어 있어 검색이 불가능합니다.")
+    # 2. 이미 저장된 유사민원 존재 시 -> 로그 찍고 리턴
+    existing = db.query(SimilarHistory).filter(SimilarHistory.complaint_id == id).all()
+    if existing:
+        logger.info(f"[유사민원] complaint_id={id} → 이미 저장된 유사 민원 {len(existing)}건 사용")
+        return [{"title": item.title, "summary": item.summary, "content": json.loads(item.content)} for item in existing]
 
-    # 2. 공개된 히스토리 중 유사 민원 검색
+    # 3. 유사 민원 임시 쿼리
     sql = text("""
         SELECT title, summary, reply_content
         FROM complaint_history
         WHERE is_public = TRUE
           AND summary IS NOT NULL
-        ORDER BY created_at DESC
+          AND reply_content IS NOT NULL
+        ORDER BY id DESC
         LIMIT 2
     """)
-    result = db.execute(sql).fetchall()
-
-    # 빈 결과 처리
-    if not result:
-        return []
-
-    return [
-        {"title": row.title, "summary": row.summary, "content": row.reply_content}
-        for row in result
-    ]
-    
-
     try:
-        rows = db.execute(sql, {"query": query_text}).fetchall()
+        rows = db.execute(sql).fetchall()
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"FTS 실행 실패: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"유사 민원 쿼리 실패: {str(e)}")
 
-    if not rows:
-        raise HTTPException(status_code=404, detail="유사한 공개 민원이 없습니다.")
+    # 4. 저장
+    for row in rows:
+        db.add(SimilarHistory(
+            complaint_id=id,
+            title=row.title,
+            summary=row.summary,
+            content=json.dumps(row.reply_content)
+        ))
+    db.commit()
 
-    return [
-        {
-            "title": row.title,
-            "summary": row.summary,
-            "content": row.reply_content
-        }
-        for row in rows
-    ]
+    # 5. 리턴
+    return [{"title": row.title, "summary": row.summary, "content": json.loads(row.reply_content)} for row in rows]
 
 @router.get("/admin/public-histories", response_model=List[ReplyBase])
 def get_public_histories(db: Session = Depends(get_db)):

@@ -25,7 +25,7 @@ class Complaint(Base):
     id = Column(Integer, primary_key=True, index=True)  # 내부 PK
     user_uid = Column(String, ForeignKey("user.user_uid"), index=True)  # 외부 식별자 (JWT sub 기준)
     
-    title = Column(String)  # 민원 요약 제목
+    title = Column(String)  # 민원 제목
     content = Column(Text)  # 민원 본문
     is_public = Column(Boolean, default=False)   # 공개 여부
     created_at = Column(DateTime, default=datetime.utcnow)
