@@ -93,6 +93,43 @@ async def upload_complaints_excel(
 
 # 2. 엑셀 다운로드 라우터 
 # [complaint]의 민원 관련 내용 및 [reply]의 답변 내용 엑셀로 추출
+# ✅ 답변 내용을 포맷팅하는 함수
+def format_reply_content(content: dict) -> str:
+    if not isinstance(content, dict):
+        return str(content)
+
+    lines = []
+    idx = 1
+
+    header = content.get("header", "").strip()
+    if header:
+        lines.append(f"{idx}. {header}")
+        idx += 1
+
+    summary = content.get("summary", "").strip()
+    if summary:
+        lines.append(f"{idx}. {summary}")
+        idx += 1
+
+    body = content.get("body", [])
+    for item in body:
+        index = item.get("index", "").strip()
+        if index:
+            lines.append(f"{idx}. {index}")
+            idx += 1
+        for section in item.get("section", []):
+            title = section.get("title", "").strip()
+            text = section.get("text", "").strip()
+            lines.append(f"{title}. {text}")
+
+    footer = content.get("footer", "").strip()
+    if footer:
+        lines.append(f"\n{idx}. {footer}")
+
+    return "\n".join(lines)
+
+
+# ✅ 엑셀 다운로드 라우터
 @router.get("/complaints/download-excel")
 def download_complaints_excel(
     ids: str,
@@ -115,12 +152,14 @@ def download_complaints_excel(
     rows = []
     for complaint in complaints:
         reply = db.query(Reply).filter(Reply.complaint_id == complaint.id).first()
+        reply_text = format_reply_content(reply.content) if reply and reply.content else "(답변 없음)"
+
         rows.append({
             "제목": complaint.title,
             "내용": complaint.content,
             "등록일": complaint.created_at.strftime("%Y-%m-%d %H:%M:%S"),
             "공개 여부": "공개" if complaint.is_public else "비공개",
-            "답변": reply.content if reply else "(답변 없음)"
+            "답변": reply_text
         })
 
     df = pd.DataFrame(rows)
@@ -135,7 +174,6 @@ def download_complaints_excel(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": "attachment; filename=complaints.xlsx"}
     )
-
 
 # 3. 민원 목록 반환 라우터
 # 해당 유저 [complaint] 민원 목록 반환
@@ -221,7 +259,6 @@ def generate_reply(
         Complaint.id == id,
         Complaint.user_uid == current_user.user_uid
     ).first()
-
     if not complaint:
         raise HTTPException(status_code=404, detail="해당 민원을 찾을 수 없거나 권한이 없습니다.")
 

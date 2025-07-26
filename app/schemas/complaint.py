@@ -95,6 +95,7 @@ class Section(BaseModel):
 class AnswerSummaryItem(BaseModel):
     index: str
     section: List[Section]
+    
 
 class ReplySummaryRequest(BaseModel):
     answer_summary: List[AnswerSummaryItem]
