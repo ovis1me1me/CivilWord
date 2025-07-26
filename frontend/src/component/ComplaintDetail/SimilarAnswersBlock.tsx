@@ -9,11 +9,30 @@ interface SimilarAnswersBlockProps {
 const labels = ['가', '나', '다', '라', '마', '바', '사', '아', '자', '차', '카', '타', '파', '하']; // 한글 라벨
 
 export default function SimilarAnswersBlock({ index, similarAnswers, containerHeight }: SimilarAnswersBlockProps) {
+  // 유사 민원이 없을 경우 메시지 표시
+  if (!similarAnswers || similarAnswers.length === 0) {
+    return (
+      <div className="space-y-4">
+        {/* 제목: 박스 바깥 */}
+        <div className="text-xl font-semibold text-black mb-2">
+          <span>유사 민원</span>
+        </div>
+        {/* 회색 박스: 내용만 감쌈 */}
+        <div
+          className="bg-gray-200 border rounded p-4 w-full flex items-center justify-center text-gray-600 h-32" // 높이를 고정하여 메시지가 중앙에 오도록 함
+          // style={{ minHeight: containerHeight || 50 }} // 기존 스타일 유지 (필요 시)
+        >
+          유사 민원이 없습니다.
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {/* 제목: 박스 바깥 */}
       <div className="text-xl font-semibold text-black mb-2">
-        <span>유사 민원{index > 0 ? `_${index + 1}` : ''}</span>
+        <span>유사 민원</span>
       </div>
 
       {/* 회색 박스: 내용만 감쌈 */}
@@ -41,10 +60,7 @@ export default function SimilarAnswersBlock({ index, similarAnswers, containerHe
                 key={itemIndex}
                 className="grid bg-gray-100 border rounded p-4 mb-4"
               >
-                {/* 1. 민원의 제목 (이미지의 "상수도 누수", "가로수 가지치기 요청" 부분) */}
-                <h3 className="font-bold text-xl mb-3 text-gray-800">{answerItem.title}</h3>
-
-                {/* 2. 민원 요지 */}
+                {/* 1. 민원 요지 */}
                 <div className="flex flex-col mb-3"> {/* flex-col로 변경하여 레이블과 내용 분리 */}
                   <span className="font-bold text-gray-700 mb-1">민원 요지 :</span>
                   <p className="text-gray-600 pl-4"> {/* 들여쓰기 위해 pl-4 추가 */}
@@ -52,7 +68,7 @@ export default function SimilarAnswersBlock({ index, similarAnswers, containerHe
                   </p>
                 </div>
 
-                {/* 3. 답변 내용 */}
+                {/* 2. 답변 내용 */}
                 <div className="flex flex-col"> {/* flex-col 유지 */}
                   <span className="font-bold text-gray-700 mb-2">답변 내용 :</span> {/* 간격 조정 */}
                   
@@ -62,8 +78,8 @@ export default function SimilarAnswersBlock({ index, similarAnswers, containerHe
                         {/* 답변의 첫 번째 줄 (예: "1. 가로등 고장으로 ...") */}
                         {/* 글씨 굵기를 font-semibold로, 크기는 base(기본)로 조정하여 과도하게 크지 않게 */}
                         <div className="font-semibold text-gray-800 mb-1 pl-2"> {/* 약간의 들여쓰기 */}
-                           {/* bodyIndex + 1은 항상 숫자이므로 .을 붙여줍니다. */}
-                           <span>{bodyIndex + 1}. {bodySectionItem.index}</span>
+                            {/* bodyIndex + 1은 항상 숫자이므로 .을 붙여줍니다. */}
+                            <span>{bodyIndex + 1}. {bodySectionItem.index}</span>
                         </div>
 
                         {/* 실제 답변 내용 (예: "가. 귀하께서 신고하신...") */}
