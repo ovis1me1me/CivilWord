@@ -25,10 +25,15 @@ from typing import Any
 from sqlalchemy.orm import Session
 from app.schemas.complaint import ReplySummaryRequest
 from app.models.complaint_history import ComplaintHistory
+from fastapi import Body
 
+from app.models.similar_history import SimilarHistory
+import json
 
-
-
+# 로그 전용
+import logging
+logger = logging.getLogger(__name__)  
+logging.basicConfig(level=logging.INFO)
 
 router = APIRouter()
 
@@ -40,7 +45,9 @@ def get_db():
     finally:
         db.close()
 
-# ✅ 1. 엑셀 업로드 라우터 (동적 URL보다 먼저 등록)
+
+#1. 엑셀 업로드 라우터 (동적 URL보다 먼저 등록)
+# [complaint]에 민원요약, 답변요약 비우고 저장
 @router.post("/complaints/upload-excel", response_model=ResponseMessage)
 async def upload_complaints_excel(
     file: UploadFile = File(...),
@@ -84,6 +91,45 @@ async def upload_complaints_excel(
     db.commit()
     return ResponseMessage(message=f"{len(df)}건의 민원이 등록되었습니다.")
 
+# 2. 엑셀 다운로드 라우터 
+# [complaint]의 민원 관련 내용 및 [reply]의 답변 내용 엑셀로 추출
+# ✅ 답변 내용을 포맷팅하는 함수
+def format_reply_content(content: dict) -> str:
+    if not isinstance(content, dict):
+        return str(content)
+
+    lines = []
+    idx = 1
+
+    header = content.get("header", "").strip()
+    if header:
+        lines.append(f"{idx}. {header}")
+        idx += 1
+
+    summary = content.get("summary", "").strip()
+    if summary:
+        lines.append(f"{idx}. {summary}")
+        idx += 1
+
+    body = content.get("body", [])
+    for item in body:
+        index = item.get("index", "").strip()
+        if index:
+            lines.append(f"{idx}. {index}")
+            idx += 1
+        for section in item.get("section", []):
+            title = section.get("title", "").strip()
+            text = section.get("text", "").strip()
+            lines.append(f"{title}. {text}")
+
+    footer = content.get("footer", "").strip()
+    if footer:
+        lines.append(f"\n{idx}. {footer}")
+
+    return "\n".join(lines)
+
+
+# ✅ 엑셀 다운로드 라우터
 @router.get("/complaints/download-excel")
 def download_complaints_excel(
     ids: str,
@@ -106,12 +152,14 @@ def download_complaints_excel(
     rows = []
     for complaint in complaints:
         reply = db.query(Reply).filter(Reply.complaint_id == complaint.id).first()
+        reply_text = format_reply_content(reply.content) if reply and reply.content else "(답변 없음)"
+
         rows.append({
             "제목": complaint.title,
             "내용": complaint.content,
             "등록일": complaint.created_at.strftime("%Y-%m-%d %H:%M:%S"),
             "공개 여부": "공개" if complaint.is_public else "비공개",
-            "답변": reply.content if reply else "(답변 없음)"
+            "답변": reply_text
         })
 
     df = pd.DataFrame(rows)
@@ -127,7 +175,9 @@ def download_complaints_excel(
         headers={"Content-Disposition": "attachment; filename=complaints.xlsx"}
     )
 
-@router.get("/complaints", response_model=ComplaintListResponse)
+# 3. 민원 목록 반환 라우터
+# 해당 유저 [complaint] 민원 목록 반환
+@router.get("/complaints", response_model=ComplaintListResponse) 
 def get_complaints(
     db: Session = Depends(get_db), 
     sort: Optional[str] = None,
@@ -144,15 +194,15 @@ def get_complaints(
     elif sort == "created_asc":
         complaints = query.order_by(Complaint.created_at.asc()).offset(skip).limit(limit).all()
     else:
-        complaints = query.offset(skip).limit(limit).all()
+        complaints = query.order_by(Complaint.created_at.desc()).offset(skip).limit(limit).all()
 
     return {
         "total": total,
         "complaints": complaints
     }
 
-
-# 7/21 추가
+# 4. 민원 반환 라우터
+# id 에 맞는 [complaint] 데이터 반환
 @router.get("/complaints/{id}", response_model=ComplaintResponse)
 def get_complaint_by_id(
     id: int,
@@ -169,6 +219,8 @@ def get_complaint_by_id(
 
     return complaint
 
+# 5. 민원 삭제
+# 해당하는 [complaint] 및 [reply] 데이터 삭제
 @router.delete("/complaints/{id}", response_model=ResponseMessage)
 def delete_complaint(
     id: int,
@@ -194,7 +246,8 @@ def delete_complaint(
 
     return ResponseMessage(message=f"민원 {id}번과 관련된 답변 및 요약이 모두 삭제되었습니다.")
 
-#민원응답 
+# 6. 답변 생성(LLM) 라우터 
+# [complaint]의 reply_summary를 input하여 [reply] 데이터 생성
 @router.post("/complaints/{id}/generate-reply", response_model=ReplyBase)
 def generate_reply(
     id: int,
@@ -206,7 +259,6 @@ def generate_reply(
         Complaint.id == id,
         Complaint.user_uid == current_user.user_uid
     ).first()
-
     if not complaint:
         raise HTTPException(status_code=404, detail="해당 민원을 찾을 수 없거나 권한이 없습니다.")
 
@@ -232,7 +284,8 @@ def generate_reply(
     )
 
     # 📌 여기에서 LLM 호출
-    generated_core = generate_llm_reply(complaint.reply_summary)
+    # generated_core = generate_llm_reply(complaint.reply_summary)
+    generated_core = [{"index": "가로등 고장으로 통행 불편 및 안전 위험에 관하여 아래와 같이 답변드립니다.", "section": [{"title": "가", "text": "귀하께서 신고하신 가로등 수리 작업은 조속한 시일 내 완료될 예정입니다."}]}]
 
     fixed_footer = (
         f" 기타 궁금하신 사항은 {user_info.department}({user_info.name}, "
@@ -260,7 +313,8 @@ def generate_reply(
 
     return reply
 
-# 답변 재생산(본인 것만)
+# 7. 답변 재생산(LLM) 라우터 
+# 기존 [reply]데이터 삭제 후, [complaint]의 reply_summary를 input하여 [reply] 데이터 생성
 @router.post("/complaints/{id}/generate-reply-again", response_model=ReplyBase)
 def generate_reply_again(
     id: int, 
@@ -297,7 +351,8 @@ def generate_reply_again(
         f" 기타 궁금하신 사항은 {user_info.department}({user_info.name}, "
         f"{user_info.contact})로 문의하여 주시면 성심껏 답변드리겠습니다. 감사합니다."
     )
-    generated_core = generate_llm_reply(complaint.reply_summary)
+    # generated_core = generate_llm_reply(complaint.reply_summary)
+    generated_core = [{"index": "가로등 고장으로 통행 불편 및 안전 위험에 관하여 아래와 같이 답변드립니다.", "section": [{"title": "가", "text": "귀하께서 신고하신 가로등 수리 작업은 조속한 시일 내 완료될 예정입니다."}]}]
     reply_content = {
         "header": fixed_header,
         "summary": fixed_summary,
@@ -321,19 +376,12 @@ def generate_reply_again(
 
     return new_reply
 
-# 관리자용 응답 조회
-@router.get("/admin/replies", response_model=List[ReplyBase])
-def get_all_replies(
-    db: Session = Depends(get_db)
-):
-    replies = db.query(Reply).all()
-    return replies
-
-# 응답 수정(컴플레인 아이디로 )
+# 8. 응답 수정(컴플레인 아이디로 )
+# 기록된 [reply]의 content 수정
 @router.put("/complaints/{complaint_id}/reply", response_model=ReplyBase)
 def update_reply(
     complaint_id: int,
-    content: Any,
+    content: Any=Body(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -360,7 +408,9 @@ def update_reply(
 
     return reply
 
-# 응답 검색(컴플레인 아이디로 )
+# 9. 답변 검색(컴플레인 아이디로)
+# 해당하는 [reply] 반환
+#수정할까말까 -> 현재 하나만 반환해도 되는
 @router.get("/complaints/{id}/replies", response_model=List[ReplyBase])
 def get_replies(
     id: int,
@@ -386,7 +436,18 @@ def get_replies(
 
     return replies
 
+# 8. 관리자용 답변 조회
+# 모든 유저의 답변 반환
+@router.get("/admin/replies", response_model=List[ReplyBase])
+def get_all_replies(
+    db: Session = Depends(get_db)
+):
+    replies = db.query(Reply).all()
+    return replies
 
+
+# 9. 민원 요약(LLM) 라우터(없으면 생성 후 반환)
+#[complaint]의 content를 input하여  LLM모델로 summary 생성
 @router.get("/complaints/{id}/summary", response_model=ComplaintSummaryResponse)
 def get_complaint_summary(
     id: int,
@@ -417,7 +478,8 @@ def get_complaint_summary(
     )
 
 
-
+# 10. 답변 요약 호출 라우터 
+# [complaint] id 기준으로 답변 요약, 제목, 민원 반환
 @router.get("/complaints/{id}/reply-summary", response_model=ComplaintSummaryResponse)
 def get_reply_summary(
     id: int,
@@ -502,62 +564,53 @@ def save_reply_summary(
 
 
 
-@router.get("/complaints/{id}/history-similar", response_model=List[dict])
+@router.get("/complaints/{id}/history-similar", response_model=list[dict])
 def get_similar_histories(
     id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # 1. 본인 민원 확인 및 민원요약 추출
+    # 1. 본인 민원 확인
     complaint = db.query(Complaint).filter(
         Complaint.id == id,
         Complaint.user_uid == current_user.user_uid
     ).first()
-
     if not complaint:
         raise HTTPException(status_code=404, detail="해당 민원이 없거나 권한이 없습니다.")
 
-    query_text = complaint.summary
-    if not query_text or not str(query_text).strip():
-        raise HTTPException(status_code=400, detail="민원요약이 비어 있어 검색이 불가능합니다.")
+    # 2. 이미 저장된 유사민원 존재 시 -> 로그 찍고 리턴
+    existing = db.query(SimilarHistory).filter(SimilarHistory.complaint_id == id).all()
+    if existing:
+        logger.info(f"[유사민원] complaint_id={id} → 이미 저장된 유사 민원 {len(existing)}건 사용")
+        return [{"title": item.title, "summary": item.summary, "content": json.loads(item.content)} for item in existing]
 
-    # 2. 공개된 히스토리 중 유사 민원 검색
-    # sql = text("""
-    #     SELECT title, reply_summary, reply_content
-    #     FROM complaint_history
-    #     WHERE is_public = TRUE
-    #       AND reply_summary IS NOT NULL
-    #       AND to_tsvector('simple', LOWER(reply_summary::text)) @@ websearch_to_tsquery('simple', :query)
-    #     ORDER BY ts_rank(to_tsvector('simple', LOWER(reply_summary::text)), websearch_to_tsquery('simple', :query)) DESC
-    #     LIMIT 10
-    # """)
-    
+    # 3. 유사 민원 임시 쿼리
     sql = text("""
-    SELECT title, summary, reply_content
-    FROM complaint_history
-    WHERE is_public = TRUE
-      AND summary IS NOT NULL
-    ORDER BY created_at DESC
-    LIMIT 2
-""")
-    
-
+        SELECT title, summary, reply_content
+        FROM complaint_history
+        WHERE is_public = TRUE
+          AND summary IS NOT NULL
+          AND reply_content IS NOT NULL
+        ORDER BY id DESC
+        LIMIT 2
+    """)
     try:
-        rows = db.execute(sql, {"query": query_text}).fetchall()
+        rows = db.execute(sql).fetchall()
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"FTS 실행 실패: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"유사 민원 쿼리 실패: {str(e)}")
 
-    if not rows:
-        raise HTTPException(status_code=404, detail="유사한 공개 민원이 없습니다.")
+    # 4. 저장
+    for row in rows:
+        db.add(SimilarHistory(
+            complaint_id=id,
+            title=row.title,
+            summary=row.summary,
+            content=json.dumps(row.reply_content)
+        ))
+    db.commit()
 
-    return [
-        {
-            "title": row.title,
-            "summary": row.summary,
-            "content": row.reply_content
-        }
-        for row in rows
-    ]
+    # 5. 리턴
+    return [{"title": row.title, "summary": row.summary, "content": json.loads(row.reply_content)} for row in rows]
 
 @router.get("/admin/public-histories", response_model=List[ReplyBase])
 def get_public_histories(db: Session = Depends(get_db)):

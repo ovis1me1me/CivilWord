@@ -25,7 +25,7 @@ export default function HistoryList({ keyword }: HistoryListProps) {
           key={item.id}
           index={idx + 1}
           title={item.title}
-          date={item.date}
+          date={item.created_at}
           id={item.id}
         />
       ))}

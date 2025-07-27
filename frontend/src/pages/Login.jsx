@@ -25,7 +25,7 @@ function Login() {
 };
 
   return (
-    <div className="page-wrapper">
+    <div className="login-page-wrapper">
       <div className="login-container">
         <form onSubmit={handleLogin} className="login-form">
           <h2 className="login-title">Civil Word</h2>

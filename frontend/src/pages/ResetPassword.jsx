@@ -27,24 +27,24 @@ function ResetPassword({ userId, question }) {
   };
 
   return (
-    <div className="container">
-      <h2 className="title">Civil Word</h2>
-      <p className="question">{question}</p>
+    <div className="password-container">
+      <h2 className="password-title">Civil Word</h2>
+      <p className="password-question">{question}</p>
       <input
         type="text"
         placeholder="질문에 대한 답변"
         value={answer}
         onChange={(e) => setAnswer(e.target.value)}
       />
+      {error && <p className="password-error">{error}</p>}
       <input
         type="password"
         placeholder="새 비밀번호 입력"
         value={newPassword}
         onChange={(e) => setNewPassword(e.target.value)}
       />
+      {message && <p className="password-success">{message}</p>}
       <button onClick={handleReset}>비밀번호 재설정</button>
-      {message && <p className="success">{message}</p>}
-      {error && <p className="error">{error}</p>}
       <button onClick={() => (window.location.href = '/Login')}>로그인 하러가기</button>
     </div>
   );

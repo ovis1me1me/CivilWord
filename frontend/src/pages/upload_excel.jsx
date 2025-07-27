@@ -40,7 +40,7 @@ function UploadExcel() {
   };
 
   return (
-    <div className="upload_excel-page-wrapper">
+    <div className="excel-page-wrapper">
       <div className="excel-container">
         <h2 className="title">
           엑셀 파일 양식을 다운로드 후 양식에 맞게 작성하여 아래 박스에 업로드 해주세요.

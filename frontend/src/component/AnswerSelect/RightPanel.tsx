@@ -35,10 +35,10 @@ export default function RightPanel({
   isGenerating,
 }: Props) {
   return (
-    <div className="flex-1 flex flex-col h-94 p-4 bg-white rounded relative">
-      <h3 className="text-xl font-semibold text-black mb-2">민원 요지</h3>
-      <div className="bg-zinc-300 p-2 mb-2 rounded h-28 overflow-auto">{summary}</div>
-      <div className="overflow-auto pr-2 max-h-[300px]">
+    <div className="flex-1 flex flex-col bg-white rounded relative">
+      <h3 className="text-xl font-semibold text-black mb-4">민원 요지</h3>
+      <div className="bg-gray-200 p-4 mb-2 rounded-lg h-28 overflow-auto">{summary}</div>
+      <div className="overflow-auto pr-2 max-h-[300px] mt-2">
         {answerSummaryBlocks.map((block, index) => (
           <AnswerBlock
             key={index}
@@ -53,11 +53,10 @@ export default function RightPanel({
           />
         ))}
       </div>
-
        <button
         onClick={onRegenerate}
         disabled={isGenerating}
-        className={`mt-4 w-full px-4 py-2 text-sm font-semibold rounded ${
+        className={`mt-4 w-full px-4 py-2 text-sm font-semibold rounded-lg hover:bg-zinc-600 ${
           isGenerating ? 'bg-gray-400' : 'bg-black'
         } text-white`}
       >

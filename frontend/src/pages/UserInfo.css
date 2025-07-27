@@ -1,44 +1,57 @@
+/* 전체 컨테이너를 정중앙에 위치시킴 */
 .form-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-top: 100px;
-    font-family: sans-serif;
-  }
-  
-  .title {
-    font-size: 28px;
-    font-weight: bold;
-    margin-bottom: 40px;
-  }
-  
-  .form-box {
-    display: flex;
-    flex-direction: column;
-    width: 300px;
-  }
-  
-  .form-box label {
-    margin: 10px 0 4px;
-    font-weight: 500;
-  }
-  
-  .form-box input,
-  .form-box select {
-    padding: 10px;
-    font-size: 14px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-  }
-  
-  .form-box button {
-    margin-top: 30px;
-    padding: 12px;
-    background-color: black;
-    color: white;
-    border: none;
-    font-weight: bold;
-    border-radius: 6px;
-    cursor: pointer;
-  }
-  
+  position: absolute;
+  top: 50%;
+  left: calc(50% + 125px); /* 250px / 2 */
+  transform: translate(-50%, -50%);
+  font-family: 'Noto Sans KR', sans-serif;
+}
+
+/* 타이틀 */
+.title {
+  font-size: 36px;
+  font-weight: bold;
+  margin-bottom: 40px;
+  text-align: center;
+}
+
+/* 폼 전체 박스 */
+.form-box {
+  display: flex;
+  flex-direction: column;
+  width: 400px;
+}
+
+/* 라벨 */
+.form-box label {
+  margin: 14px 0 6px;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+/* 인풋/셀렉트 박스 */
+.form-box input,
+.form-box select {
+  padding: 14px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+/* 버튼 */
+.form-box button {
+  margin-top: 40px;
+  padding: 14px;
+  background-color: black;
+  color: white;
+  border: none;
+  font-weight: bold;
+  font-size: 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.form-box button:hover {
+  background-color: #333;
+}

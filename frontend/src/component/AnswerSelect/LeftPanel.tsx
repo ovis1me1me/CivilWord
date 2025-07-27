@@ -4,9 +4,11 @@ interface Props {
 
 export default function LeftPanel({ content }: Props) {
   return (
-    <div className="flex-1 p-4 bg-zinc-300 rounded h-120 overflow-auto">
-      <h3 className="font-semibold mb-2">민원 내용</h3>
-      <p>{content}</p>
+    <div>
+      <h3 className="text-xl font-semibold mb-4">민원 내용</h3> {/* 박스 밖으로 이동 */}
+      <div className="flex-1 p-4 bg-gray-200 rounded-lg h-[480px] overflow-auto">
+        <p>{content}</p>
+      </div>
     </div>
   );
 }

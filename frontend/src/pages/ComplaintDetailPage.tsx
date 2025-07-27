@@ -222,10 +222,10 @@ export default function ComplaintDetailPage() {
     <div className="ml-[250px] p-4">
       <div className="p-4 max-w-[1000px] mx-auto space-y-6 relative">
         <Header title={complaint.title} />
-        <ContentBox content={complaint.content} />
+        <ContentBox label="민원 내용" content={complaint.content} />
         <ContentBox label="민원 요지" content={complaint.summary} />
 
-        <div className="grid grid-cols-2 gap-6 max-w-[1000px] mx-auto p-4">
+        <div className="grid md:grid-cols-2 gap-6 max-w-[1000px] mx-auto">
           {/* similarAnswersList를 그대로 전달합니다. */}
           <SimilarAnswersBlock
             index={0}
@@ -261,7 +261,7 @@ export default function ComplaintDetailPage() {
             className={`w-1/5 flex justify-center gap-2 px-6 py-2 rounded-lg font-semibold ${
               isGenerating
                 ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-black text-white hover:bg-gray-800 transition'
+                : 'bg-black text-white hover:bg-zinc-600 transition'
             }`}
           >
             {isGenerating ? '답변 생성 중' : '답변 생성'}

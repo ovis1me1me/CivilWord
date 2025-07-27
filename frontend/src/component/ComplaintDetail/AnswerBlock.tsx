@@ -50,7 +50,7 @@ export default function AnswerBlock({
         <span>답변 요지{index > 0 ? `_${index + 1}` : ''}</span>
       </div>
 
-      <div className="bg-gray-200 border rounded p-4 space-y-2">
+      <div className="bg-gray-200 border rounded-lg p-4 space-y-2">
         <div className="mb-1">
           <textarea
             ref={summaryTextareaRef}
@@ -67,23 +67,23 @@ export default function AnswerBlock({
           <div key={i} className="flex items-start gap-2">
             <button
               onClick={onAddAnswer}
-              className="w-7 h-7 flex items-center text-white justify-center hover:text-green-500 hover:bg-white rounded-full flex-shrink-0"
+              className="w-6 h-6 flex items-center mt-1 text-white justify-center bg-black hover:text-green-500 hover:bg-white rounded-full flex-shrink-0"
               type="button"
               title="요지 추가"
             >
-              <Plus className="w-6 h-6" />
+              <Plus className="w-5 h-5" />
             </button>
 
             <button
               onClick={() => onDeleteAnswer(i)}
-              className="w-7 h-7 flex items-center text-white justify-center hover:text-red-500 hover:bg-white rounded-full flex-shrink-0"
+              className="w-6 h-6 flex items-center mt-1 text-white justify-center bg-black hover:text-red-500 hover:bg-white rounded-full flex-shrink-0"
               type="button"
               title="요지 삭제"
             >
-              <Minus className="w-6 h-6" />
+              <Minus className="w-5 h-5" />
             </button>
 
-            <span className="w-5 font-bold pt-2 flex-shrink-0">{labels[i] || '•'}.</span>
+            <span className="w-5 font-bold pt-1 flex-shrink-0">{labels[i] || '•'}.</span>
             <textarea
               // 이 부분을 수정했습니다.
               ref={(el: HTMLTextAreaElement | null) => {
@@ -103,7 +103,7 @@ export default function AnswerBlock({
       <div className="flex justify-center mt-4">
         <button
           onClick={onAddSummary}
-          className="w-2/5 flex justify-center gap-1 px-4 py-1.5 bg-gray-400 text-white text-sm rounded-full hover:bg-gray-500"
+          className="w-2/5 flex justify-center gap-1 px-4 py-1.5 bg-gray-400 text-white text-sm font-semibold rounded-full hover:bg-gray-500"
         >
           <Plus className="w-5 h-5" /> 요지 추가하기
         </button>

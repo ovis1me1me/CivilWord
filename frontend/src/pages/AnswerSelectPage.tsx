@@ -8,7 +8,8 @@ import {
   fetchReplies,
   fetchReplySummary,
   regenerateReply,
-  saveReplySummary
+  saveReplySummary,
+  fetchSimilarHistories,
 } from '../utils/api';
 import Header from '../component/ComplaintDetail/Header';
 import LeftPanel from '../component/AnswerSelect/LeftPanel';
@@ -18,6 +19,7 @@ import AnswerBox from '../component/AnswerSelect/AnswerBox';
 import { FullAnswer, createNewBlock, ContentBlock } from '../component/AnswerSelect/types';
 import AnswerSelectActions from '../component/AnswerSelect/AnswerSelectActions';
 import Spinner from '../component/Shared/Spinner';
+import SimilarAnswersBlock from '../component/AnswerSelect/SimilarAnswersBlock';
 
 interface AnswerSection {
   title: string;
@@ -101,7 +103,7 @@ export default function AnswerSelectPage() {
       }
     } catch (e) {
       console.error("본문(body) JSON 파싱 실패:", e);
-      contentBlocks = [createNewBlock('답변 본문 형식에 오류가 있습니다.')];
+      contentBlocks = [createNewBlock('답변을 재생성해주세요.')];
     }
 
     return {
@@ -112,15 +114,21 @@ export default function AnswerSelectPage() {
     };
   };
 
+  // similarAnswersList의 타입을 백엔드 반환 형식에 맞게 수정합니다.
+  const [similarAnswersList, setSimilarAnswersList] = useState<
+    { title: string; summary: string; content: string }[]
+  >([]);
+
   const loadReplyData = useCallback(async (showLoadingSpinner = true) => {
     if (!id) return;
     if (showLoadingSpinner) setLoading(true);
     setError(null);
     try {
-      const [complaintSummaryRes, replySummaryRes, repliesRes] = await Promise.all([
+      const [complaintSummaryRes, replySummaryRes, repliesRes, similarHistoryRes] = await Promise.all([
         fetchComplaintSummary(Number(id)),
         fetchReplySummary(Number(id)),
         fetchReplies(Number(id)),
+        fetchSimilarHistories(Number(id)), // 유사 민원 이력 호출
       ]);
 
       const actualComplaintSummary = complaintSummaryRes.data.summary || '민원 요약 없음';
@@ -146,6 +154,9 @@ export default function AnswerSelectPage() {
       setSelectedAnswer(null);
       setCurrentPage(0);
       setIsEditing(false);
+
+      // 유사 민원 이력 데이터를 상태에 저장합니다.
+      setSimilarAnswersList(similarHistoryRes); 
 
     } catch (err) {
       console.error('데이터 불러오기 실패', err);
@@ -240,7 +251,7 @@ export default function AnswerSelectPage() {
 
         await Promise.all([
           updateReplyContent(Number(id), answerWithoutIds),
-          saveReplySummary(Number(id), { answer_summary: answerSummaryBlocks }),
+          //aveReplySummary(Number(id), { answer_summary: answerSummaryBlocks }),
           updateReplyStatus(Number(id), status)
         ]);
 
@@ -279,71 +290,79 @@ export default function AnswerSelectPage() {
   if (error) return <div className="flex justify-center items-center h-screen text-red-500">{error}</div>;
 
   return (
-    <div className="flex flex-col w-full max-w-6xl mx-auto p-8 space-y-8 min-h-screen bg-slate-50 ml-[300px] p-4">
-      <Header title={complaintTitle} />
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <LeftPanel content={complaintContent} />
-        <RightPanel
-          summary={complaintSummary}
-          answerSummaryBlocks={answerSummaryBlocks}
-          onReviewChange={handleIndexChange}
-          onSectionChange={handleSectionChange}
-          onAddSection={handleAddSection}
-          onDeleteSection={handleDeleteSection}
-          onAddBlock={handleAddBlock}
-          onRegenerate={handleRegenerate}
-          isGenerating={isGenerating}
-        />
-      </div>
-
-      <div className="flex justify-start">
-        <SegmentedControl selected={selectedSegment} setSelected={setSelectedSegment} />
-      </div>
-
-      <div className="flex gap-4 relative min-h-[384px]">
-        {selectedSegment === '생성된 답변' && generatedAnswers.length > 0 && (
-          <AnswerBox
-            content={selectedAnswer ?? generatedAnswers[currentPage]}
-            onChange={setSelectedAnswer}
-            isEditing={isEditing}
-            onEdit={() => {
-              setSelectedAnswer(JSON.parse(JSON.stringify(generatedAnswers[currentPage])));
-              setIsEditing(true);
-            }}
+    <div className="ml-[250px] p-4">
+      <div className="p-4 max-w-[1000px] mx-auto space-y-6">
+        <Header title={complaintTitle} />
+        <div className="flex flex-col grid md:grid-cols-2 gap-8">
+          <LeftPanel content={complaintContent} />
+          <RightPanel
+            summary={complaintSummary}
+            answerSummaryBlocks={answerSummaryBlocks}
+            onReviewChange={handleIndexChange}
+            onSectionChange={handleSectionChange}
+            onAddSection={handleAddSection}
+            onDeleteSection={handleDeleteSection}
+            onAddBlock={handleAddBlock}
+            onRegenerate={handleRegenerate}
+            isGenerating={isGenerating}
           />
-        )}
-        {selectedSegment === '생성된 답변' && generatedAnswers.length === 0 && !loading && (
-          <div className="flex items-center justify-center w-full p-4 bg-zinc-200 rounded">
-            생성된 답변이 없습니다.
-          </div>
-        )}
-        {selectedSegment === '유사 민원 답변' && (
-          <div className="flex-1 h-80 p-4 bg-zinc-300 rounded">유사 답변 예시...</div>
-        )}
-        {isGenerating && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-60 rounded">
-            <Spinner />
-          </div>
-        )}
-      </div>
+        </div>
 
-      {selectedAnswer ? (
-        <AnswerSelectActions onReselect={handleReselect} onHold={handleHold} onComplete={handleComplete} />
-      ) : (
-        generatedAnswers.length > 1 && (
-          <div className="flex justify-center gap-2">
-            {generatedAnswers.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setCurrentPage(i)}
-                className={`px-2 py-1 rounded text-xs ${currentPage === i ? 'bg-black text-white' : 'bg-gray-200'}`}
-              >
-                {i + 1}
-              </button>
-            ))}
-          </div>
-        )
-      )}
-    </div>
-  );
+        <div className="flex justify-start">
+          <SegmentedControl selected={selectedSegment} setSelected={setSelectedSegment} />
+        </div>
+
+        <div className="flex relative min-h-[384px]">
+          {selectedSegment === '생성된 답변' && generatedAnswers.length > 0 && (
+            <AnswerBox
+              content={selectedAnswer ?? generatedAnswers[currentPage]}
+              onChange={setSelectedAnswer}
+              isEditing={isEditing}
+              onEdit={() => {
+                setSelectedAnswer(JSON.parse(JSON.stringify(generatedAnswers[currentPage])));
+                setIsEditing(true);
+              }}
+            />
+          )}
+          {selectedSegment === '생성된 답변' && generatedAnswers.length === 0 && !loading && (
+            <div className="flex items-center justify-center w-full p-4 bg-gray-200 rounded-lg">
+              생성된 답변이 없습니다.
+            </div>
+          )}
+          {selectedSegment === '유사 민원 답변' && (
+            <div className="flex-1 p-4 bg-gray-200 rounded-lg"> {/* h-80 클래스를 제거합니다. */}
+              <SimilarAnswersBlock
+                index={0}
+                similarAnswers={similarAnswersList} 
+                // containerHeight={answerHeight} // 이 주석 처리된 부분을 완전히 제거합니다.
+              />
+            </div>
+          )}
+          {isGenerating && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-60 rounded">
+              <Spinner />
+            </div>
+          )}
+        </div>
+
+        {selectedAnswer ? (
+          <AnswerSelectActions onReselect={handleReselect} onHold={handleHold} onComplete={handleComplete} />
+        ) : (
+          generatedAnswers.length > 1 && (
+            <div className="flex justify-center gap-2">
+              {generatedAnswers.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setCurrentPage(i)}
+                  className={`px-2 py-1 rounded text-xs ${currentPage === i ? 'bg-black text-white' : 'bg-gray-200'}`}
+                >
+                  {i + 1}
+                </button>
+              ))}
+            </div>
+          )
+        )}
+      </div>
+  </div>
+  );
 }

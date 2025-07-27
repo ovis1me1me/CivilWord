@@ -18,9 +18,9 @@ export default function ComplaintList({
   onTitleClick,
 }: Props) {
   return (
-    <div className="mt-4 ml-[250px] p-4"> {/* 사이드 바 고려하여 중앙 위치*/}
+    <div className="mt-4 ml-[250px]"> {/* 사이드 바 고려하여 중앙 위치*/}
       {/* Header */}
-      <div className="flex items-center bg-gray-100 p-2 rounded mb-2">
+      <div className="flex items-center bg-gray-100 p-2 rounded-lg mb-2">
         <input
           type="checkbox"
           onChange={toggleSelectAll}

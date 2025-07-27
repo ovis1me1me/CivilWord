@@ -34,7 +34,7 @@ const FindId = () => {
 
       {userId ? (
         <div className="find-id-result">
-          <p>당신의 아이디는 <strong>{userId}</strong> 입니다.</p>
+          <p>당신의 <strong>아이디</strong>는 <strong>"{userId}"</strong> 입니다.</p>
           <button onClick={() => (window.location.href = '/Login')}>로그인 하러가기</button>
           <button onClick={() => (window.location.href = '/FindPassword')}>비밀번호 찾기</button>
         </div>
