@@ -76,6 +76,7 @@ export default function AnswerBox({ content, onChange, isEditing, onEdit }: Prop
     });
   };
 
+  // '가', '나', '다' 와 같은 라벨을 생성하는 함수
   const getSectionLabel = (index: number) => `${'가나다라마바사아자차카타파하'[index]}.`;
 
   const handleCopyAnswer = () => {
@@ -102,6 +103,7 @@ export default function AnswerBox({ content, onChange, isEditing, onEdit }: Prop
     return <div className="p-4 bg-gray-200 rounded-2xl">답변 내용이 없습니다.</div>;
   }
 
+  // 섹션 번호를 관리하기 위한 변수
   let sectionNumber = 1;
 
   return (
@@ -140,7 +142,6 @@ export default function AnswerBox({ content, onChange, isEditing, onEdit }: Prop
           />
         </div>
       </div>
-
       {/* 3. 답변 본문 블록 */}
       {content.body.map((block, blockIndex) => (
         <div key={block.id || blockIndex} className="flex items-start space-x-3">
@@ -213,7 +214,6 @@ export default function AnswerBox({ content, onChange, isEditing, onEdit }: Prop
           </div>
         </div>
       )}
-
       {/* 4. 끝맺음 */}
       <div className="flex items-start space-x-3">
         <span className="text-lg font-bold text-gray-800 pt-3">
