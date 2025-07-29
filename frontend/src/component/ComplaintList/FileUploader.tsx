@@ -29,20 +29,22 @@ export default function FileUploader({ onUploadSuccess }: Props) {
   };
 
   return (
-    <div className="flex items-center justify-between bg-neutral-100 rounded w-full max-w-[917px] h-9 mx-auto mt-4 px-4">
-      <span className="text-black text-base font-medium">{fileName}</span>
-      <label
-        htmlFor="fileInput"
-        className="bg-black text-white px-3 py-1 rounded cursor-pointer text-base font-semibold hover:bg-gray-800 transition"
-      >
-        파일 선택
-      </label>
-      <input
-        id="fileInput"
-        type="file"
-        className="hidden"
-        onChange={handleFileChange}
-      />
+    <div className="flex items-center bg-neutral-100 rounded-lg h-10 mt-4 ml-[250px]">
+      <div className="flex justify-between w-full">
+        <span className="flex-1 text-black text-base font-medium ml-5 mt-2">{fileName}</span>
+        <label
+          htmlFor="fileInput"
+          className="bg-black text-white h-10 px-3 pt-2 rounded-lg cursor-pointer text-base font-semibold hover:bg-zinc-600 transition"
+        >
+          파일 선택
+        </label>
+        <input
+          id="fileInput"
+          type="file"
+          className="hidden"
+          onChange={handleFileChange}
+        />
+        </div>
     </div>
   );
 }

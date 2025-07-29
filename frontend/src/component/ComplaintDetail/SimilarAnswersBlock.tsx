@@ -37,7 +37,7 @@ export default function SimilarAnswersBlock({ index, similarAnswers, containerHe
 
       {/* 회색 박스: 내용만 감쌈 */}
       <div
-        className="bg-gray-200 border rounded p-4 space-y-4 w-full sticky top-36 max-h-[500px] overflow-y-auto"
+        className="bg-gray-200 border rounded-lg p-4 space-y-4 w-full sticky top-36 max-h-[500px] overflow-y-auto"
         // style={{ minHeight: containerHeight || 50 }}
       >
         <div className="sticky top-24 self-start w-full max-w-md">
@@ -58,7 +58,7 @@ export default function SimilarAnswersBlock({ index, similarAnswers, containerHe
             return (
               <div
                 key={itemIndex}
-                className="grid bg-gray-100 border rounded p-4 mb-4"
+                className="grid bg-gray-100 border rounded-lg p-4 mb-4"
               >
                 {/* 1. 민원 요지 */}
                 <div className="flex flex-col mb-3"> {/* flex-col로 변경하여 레이블과 내용 분리 */}

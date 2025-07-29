@@ -20,7 +20,7 @@ export default function SimilarAnswersBlock({ index, similarAnswers /*, containe
         </div>
         {/* 회색 박스: 내용만 감쌈 */}
         <div
-          className="bg-zinc-200 border rounded p-4 w-full flex items-center justify-center text-gray-600"
+          className="bg-zinc-200 border rounded-lg p-4 w-full flex items-center justify-center text-gray-600"
           // style={{ minHeight: containerHeight || 'auto' }} // 이 부분을 제거합니다.
         >
           유사 민원이 없습니다.
@@ -30,7 +30,7 @@ export default function SimilarAnswersBlock({ index, similarAnswers /*, containe
   }
 
   return (
-    <div className="space-y-4 w-full">
+    <div className="space-y-4 w-full p-4">
       {/* 제목: 박스 바깥 */}
       <div className="text-xl font-semibold text-black mb-2">
         <span>유사 민원</span>
@@ -44,28 +44,28 @@ export default function SimilarAnswersBlock({ index, similarAnswers /*, containe
         return (
           <div
             key={itemIndex}
-            className="bg-white border rounded p-4 mb-4 shadow-sm" // 이 부분이 각 답변 항목의 스타일을 정의합니다.
+            className="bg-white border rounded-lg p-4 mb-4 shadow-sm" // 이 부분이 각 답변 항목의 스타일을 정의합니다.
           >
             {/* 1. 민원 요지 */}
             <div className="mb-3">
-              <span className="font-semibold text-gray-700 block mb-1">민원 요지:</span>
-              <p className="text-gray-600 pl-4 text-sm break-words">
+              <span className="font-semibold block mb-1">민원 요지:</span>
+              <p className=" pl-4 text-md break-words">
                 {typeof answerItem.summary === 'object' ? JSON.stringify(answerItem.summary) : answerItem.summary}
               </p>
             </div>
 
             {/* 2. 답변 내용 */}
             <div>
-              <span className="font-semibold text-gray-700 block mb-2">답변 내용:</span>
+              <span className="font-semibold block mb-2">답변 내용:</span>
               {/* answerItem.content가 객체 형태일 경우 계층적으로 렌더링 */}
               {typeof answerItem.content === 'object' && answerItem.content !== null ? (
                 <>
                   {/* 헤더 */}
-                  <p className="whitespace-pre-line text-gray-800 pl-4">
+                  <p className="whitespace-pre-line pl-4">
                     <span className="font-semibold">{sectionCounter++}. </span> {answerItem.content.header || '없음'}
                   </p>
                   {/* 요약 */}
-                  <p className="whitespace-pre-line text-gray-800 mt-2 pl-4">
+                  <p className="whitespace-pre-line mt-2 pl-4">
                     <span className="font-semibold">{sectionCounter++}. </span> {answerItem.content.summary || '없음'}
                   </p>
 
@@ -74,7 +74,7 @@ export default function SimilarAnswersBlock({ index, similarAnswers /*, containe
                     answerItem.content.body.map((bodyItem, bodyIndex) => {
                       const currentSectionNumber = sectionCounter++;
                       return (
-                        <div key={bodyIndex} className="whitespace-pre-line text-gray-800 mt-2 pl-4">
+                        <div key={bodyIndex} className="whitespace-pre-line mt-2 pl-4">
                           <span className="font-semibold">{currentSectionNumber}. </span>
                           {/* bodyItem.index (본문 소제목) 렌더링 */}
                           {bodyItem.index && (
@@ -98,20 +98,20 @@ export default function SimilarAnswersBlock({ index, similarAnswers /*, containe
                     })
                   ) : (
                     // body가 배열이 아니거나 비어있을 경우 (단순 문자열 등)
-                    <p className="whitespace-pre-line text-gray-800 mt-2 pl-4">
+                    <p className="whitespace-pre-line mt-2 pl-4">
                       <span className="font-semibold">{sectionCounter++}. </span>
                       {(answerItem.content?.body ? String(answerItem.content.body) : '본문이 없습니다.')}
                     </p>
                   )}
 
                   {/* 푸터 */}
-                  <p className="whitespace-pre-line text-gray-800 mt-2 pl-4">
+                  <p className="whitespace-pre-line mt-2 pl-4">
                     <span className="font-semibold">{sectionCounter++}. </span> {answerItem.content.footer || '없음'}
                   </p>
                 </>
               ) : (
                 // content가 객체가 아닐 경우 (기존처럼 문자열로 출력)
-                <p className="text-gray-600 pl-4 text-sm break-words">
+                <p className="pl-4 text-md break-words">
                   {typeof answerItem.content === 'object' ? JSON.stringify(answerItem.content) : answerItem.content}
                 </p>
               )}

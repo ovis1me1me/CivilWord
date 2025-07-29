@@ -1,54 +1,66 @@
+/* FindId.css */
+
 .find-id-container {
   display: flex;
   flex-direction: column;
-  align-items: center;
   justify-content: center;
-  height: 90vh;
+  align-items: center;
+  min-height: 100vh;
+  padding: 24px;
   background-color: #ffffff;
   font-family: 'Noto Sans KR', sans-serif;
 }
 
 .find-id-title {
-  font-size: 20px;
-  font-weight: bold;
-  margin-bottom: 20px;
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 30px;
+  text-align: center;
 }
 
 .find-id-form,
 .find-id-result {
   width: 100%;
-  max-width: 350px;
+  max-width: 420px;
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
 .find-id-form input {
-  padding: 10px;
-  font-size: 14px;
+  padding: 14px;
+  font-size: 16px;
   border: 1px solid #ccc;
-  border-radius: 5px;
+  border-radius: 8px;
 }
 
 .find-id-form button,
 .find-id-result button {
-  padding: 10px;
+  padding: 14px;
   background-color: #000;
   color: white;
-  font-size: 15px;
-  font-weight: bold;
+  font-size: 16px;
+  font-weight: 600;
   border: none;
-  border-radius: 5px;
+  border-radius: 8px;
   cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.find-id-form button:hover,
+.find-id-result button:hover {
+  background-color: #333;
 }
 
 .find-id-result p {
-  margin-bottom: 10px;
+  font-size: 20px;
+  margin-top: 50px;
+  margin-bottom: 50px;
   text-align: center;
 }
 
 .error-message {
   color: red;
-  font-size: 14px;
+  font-size: 15px;
   text-align: center;
 }

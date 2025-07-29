@@ -290,77 +290,79 @@ export default function AnswerSelectPage() {
   if (error) return <div className="flex justify-center items-center h-screen text-red-500">{error}</div>;
 
   return (
-    <div className="flex flex-col w-full max-w-6xl mx-auto p-8 space-y-8 min-h-screen bg-slate-50 ml-[300px] p-4">
-      <Header title={complaintTitle} />
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <LeftPanel content={complaintContent} />
-        <RightPanel
-          summary={complaintSummary}
-          answerSummaryBlocks={answerSummaryBlocks}
-          onReviewChange={handleIndexChange}
-          onSectionChange={handleSectionChange}
-          onAddSection={handleAddSection}
-          onDeleteSection={handleDeleteSection}
-          onAddBlock={handleAddBlock}
-          onRegenerate={handleRegenerate}
-          isGenerating={isGenerating}
-        />
-      </div>
+    <div className="ml-[250px] p-4">
+      <div className="p-4 max-w-[1000px] mx-auto space-y-6">
+        <Header title={complaintTitle} />
+        <div className="flex flex-col grid md:grid-cols-2 gap-8">
+          <LeftPanel content={complaintContent} />
+          <RightPanel
+            summary={complaintSummary}
+            answerSummaryBlocks={answerSummaryBlocks}
+            onReviewChange={handleIndexChange}
+            onSectionChange={handleSectionChange}
+            onAddSection={handleAddSection}
+            onDeleteSection={handleDeleteSection}
+            onAddBlock={handleAddBlock}
+            onRegenerate={handleRegenerate}
+            isGenerating={isGenerating}
+          />
+        </div>
 
-       <div className="flex justify-start">
-        <SegmentedControl selected={selectedSegment} setSelected={setSelectedSegment} />
-      </div>
+        <div className="flex justify-start">
+          <SegmentedControl selected={selectedSegment} setSelected={setSelectedSegment} />
+        </div>
 
-      <div className="flex gap-4 relative min-h-[384px]">
-        {selectedSegment === '생성된 답변' && generatedAnswers.length > 0 && (
-          <AnswerBox
-            content={selectedAnswer ?? generatedAnswers[currentPage]}
-            onChange={setSelectedAnswer}
-            isEditing={isEditing}
-            onEdit={() => {
-              setSelectedAnswer(JSON.parse(JSON.stringify(generatedAnswers[currentPage])));
-              setIsEditing(true);
-            }}
-          />
-        )}
-        {selectedSegment === '생성된 답변' && generatedAnswers.length === 0 && !loading && (
-          <div className="flex items-center justify-center w-full p-4 bg-zinc-200 rounded">
-            생성된 답변이 없습니다.
-          </div>
-        )}
-        {selectedSegment === '유사 민원 답변' && (
-          <div className="flex-1 p-4 bg-zinc-300 rounded"> {/* h-80 클래스를 제거합니다. */}
-            <SimilarAnswersBlock
-              index={0}
-              similarAnswers={similarAnswersList} 
-              // containerHeight={answerHeight} // 이 주석 처리된 부분을 완전히 제거합니다.
-            />
-          </div>
-        )}
-        {isGenerating && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-60 rounded">
-            <Spinner />
-          </div>
-        )}
-      </div>
+        <div className="flex relative min-h-[384px]">
+          {selectedSegment === '생성된 답변' && generatedAnswers.length > 0 && (
+            <AnswerBox
+              content={selectedAnswer ?? generatedAnswers[currentPage]}
+              onChange={setSelectedAnswer}
+              isEditing={isEditing}
+              onEdit={() => {
+                setSelectedAnswer(JSON.parse(JSON.stringify(generatedAnswers[currentPage])));
+                setIsEditing(true);
+              }}
+            />
+          )}
+          {selectedSegment === '생성된 답변' && generatedAnswers.length === 0 && !loading && (
+            <div className="flex items-center justify-center w-full p-4 bg-gray-200 rounded-lg">
+              생성된 답변이 없습니다.
+            </div>
+          )}
+          {selectedSegment === '유사 민원 답변' && (
+            <div className="flex-1 p-4 bg-gray-200 rounded-lg"> {/* h-80 클래스를 제거합니다. */}
+              <SimilarAnswersBlock
+                index={0}
+                similarAnswers={similarAnswersList} 
+                // containerHeight={answerHeight} // 이 주석 처리된 부분을 완전히 제거합니다.
+              />
+            </div>
+          )}
+          {isGenerating && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-60 rounded">
+              <Spinner />
+            </div>
+          )}
+        </div>
 
-      {selectedAnswer ? (
-        <AnswerSelectActions onReselect={handleReselect} onHold={handleHold} onComplete={handleComplete} />
-      ) : (
-        generatedAnswers.length > 1 && (
-          <div className="flex justify-center gap-2">
-            {generatedAnswers.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setCurrentPage(i)}
-                className={`px-2 py-1 rounded text-xs ${currentPage === i ? 'bg-black text-white' : 'bg-gray-200'}`}
-              >
-                {i + 1}
-              </button>
-            ))}
-          </div>
-        )
-      )}
-    </div>
+        {selectedAnswer ? (
+          <AnswerSelectActions onReselect={handleReselect} onHold={handleHold} onComplete={handleComplete} />
+        ) : (
+          generatedAnswers.length > 1 && (
+            <div className="flex justify-center gap-2">
+              {generatedAnswers.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setCurrentPage(i)}
+                  className={`px-2 py-1 rounded text-xs ${currentPage === i ? 'bg-black text-white' : 'bg-gray-200'}`}
+                >
+                  {i + 1}
+                </button>
+              ))}
+            </div>
+          )
+        )}
+      </div>
+  </div>
   );
 }

@@ -7,11 +7,14 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  position:fixed;
+  position: fixed;
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: 16px; /* 기본 글자 크기 키움 */
+  color: #333;
 }
 
 .sidebar-title {
-  font-size: 18px;
+  font-size: 22px; /* 제목은 더 크게 */
   font-weight: bold;
   margin-bottom: 30px;
 }
@@ -21,7 +24,7 @@
 }
 
 .sidebar-label {
-  font-size: 14px;
+  font-size: 18px; /* 라벨도 키움 */
   font-weight: bold;
   margin-bottom: 10px;
 }
@@ -32,36 +35,62 @@
 }
 
 .sidebar-section li {
-  margin-bottom: 10px;
+  margin-bottom: 14px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px; /* 아이콘과 텍스트 간격 키움 */
   color: #333;
+  font-size: 16px; /* 리스트 글자 크기 */
 }
 
+/* 링크 기본 스타일 - padding과 border 미리 적용 */
 .sidebar-section a {
   text-decoration: none;
   color: #333;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 16px;
+  padding: 2px 3px;
+  border-radius: 6px;
+  border: 1px solid transparent; /* ✅ 기본값도 border 있어야 움직이지 않음 */
+  transition: background-color 0.2s, color 0.2s;
+}
+
+/* hover 시 강조 효과만 변경 (레이아웃 변화 없음) */
+.sidebar-section a:hover {
+  background-color: #e0e0e0;
+  color: #000;
+  border-color: transparent; /* 혹시 hover에서 border 생길 경우 대비 */
 }
 
 .sidebar-footer button {
   background: none;
-  border: none;
   color: #333;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 16px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  padding: 2px 3px;
+  border-radius: 6px;
+  border: 1px solid transparent; /* ✅ 기본값도 border 있어야 움직이지 않음 */
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.sidebar-footer button:hover {
+  background-color: #e0e0e0;
+  color: #000;
+  border-color: transparent;
 }
 
 .sidebar img {
-  width: 16px;
-  height: 16px;
+  width: 20px; /* 아이콘 크기 키움 */
+  height: 20px;
   object-fit: contain;
-  vertical-align: middle; /* 글자와 수직 중앙 맞춤 */
   display: inline-block;
-  margin-right: 6px; /* 글자와 간격 */
+  /* vertical-align 제거, flex container로 정렬 */
+  margin-right: 0; /* gap 으로 간격 조정 중복 제거 */
 }
 
 .sidebar-label-with-edit {
@@ -71,8 +100,8 @@
 }
 
 .edit-icon {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   cursor: pointer;
   margin-left: 8px;
   opacity: 0.7;

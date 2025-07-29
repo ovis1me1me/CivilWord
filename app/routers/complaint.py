@@ -285,6 +285,7 @@ def generate_reply(
 
     # 📌 여기에서 LLM 호출
     generated_core = generate_llm_reply(complaint.reply_summary)
+    # generated_core = [{"index": "가로등 고장으로 통행 불편 및 안전 위험에 관하여 아래와 같이 답변드립니다.", "section": [{"title": "가", "text": "귀하께서 신고하신 가로등 수리 작업은 조속한 시일 내 완료될 예정입니다."}]}]
 
     fixed_footer = (
         f" 기타 궁금하신 사항은 {user_info.department}({user_info.name}, "
@@ -351,6 +352,7 @@ def generate_reply_again(
         f"{user_info.contact})로 문의하여 주시면 성심껏 답변드리겠습니다. 감사합니다."
     )
     generated_core = generate_llm_reply(complaint.reply_summary)
+    # generated_core = [{"index": "가로등 고장으로 통행 불편 및 안전 위험에 관하여 아래와 같이 답변드립니다.", "section": [{"title": "가", "text": "귀하께서 신고하신 가로등 수리 작업은 조속한 시일 내 완료될 예정입니다."}]}]
     reply_content = {
         "header": fixed_header,
         "summary": fixed_summary,

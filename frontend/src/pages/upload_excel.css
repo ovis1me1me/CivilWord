@@ -1,106 +1,139 @@
-.upload_excel-page-wrapper {
-  box-sizing: border-box;
-  height: 100vh;                 /* 전체 화면 높이 */
-  margin-left: 250px;           /* 사이드바 너비만큼 왼쪽 여백 */
-  padding: 1rem;                /* p-4: padding 16px */
+/* 전체 페이지 래퍼 */
+.excel-page-wrapper {
+  position: absolute;
+  top: 0;
+  left: 250px;
+  width: calc(100vw - 250px);
+  height: 100vh;
   display: flex;
-  justify-content: center;      /* 가로 중앙 */
-  align-items: center;          /* 세로 중앙 */
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  box-sizing: border-box;
+  font-family: 'Noto Sans KR', sans-serif;
 }
 
+/* 내부 콘텐츠 박스 */
 .excel-container {
-  margin: 0 auto;
+  width: 100%;
+  max-width: 960px;
+  max-height: 90vh;
   padding: 40px;
-  max-width: 100%;
+  box-sizing: border-box;
+  background-color: white;
+  border-radius: 0;
 }
 
+/* 타이틀 */
 .title {
-  font-size: 16px;
+  font-size: 23px;
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  color: #444;
 }
 
+/* 예시 링크 */
 .example-link {
-  display: block;
+  display: flex;
+  align-items: center;
+  font-size: 1.1rem;
+  color: #696969;
+  text-decoration: underline;
+  margin: 0 auto 24px;
   width: fit-content;
-  margin: 0 auto 30px;
-  font-size: 14px;
-  color: #333;
+  text-underline-offset: 3px;
 }
 
+.example-link:hover {
+  color: rgb(49, 140, 251);
+}
+
+/* 업로드 박스 */
 .upload-box {
   background-color: #f8f8f8;
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 1rem;
 }
 
 .upload-label {
   cursor: pointer;
-  color: #666;
-  font-size: 16px;
+  color: #444;
+  font-size: 1.1rem;
+}
+
+.upload-label:hover {
+  color: rgb(135, 135, 135)
 }
 
 .file-name {
-  margin-left: 10px;
   flex-grow: 1;
-  color: #333;
+  font-size: 1rem;
+  color: #222;
+  word-break: break-word;
 }
 
-/* .upload-button {
-  padding: 6px 14px;
-  background-color: black;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  width: 120px;
-  text-align: center;
-} */
-
+/* 버튼 */
 .button-wrapper {
   display: flex;
   justify-content: flex-end;
-  margin-top: 20px;
+  margin-top: 24px;
 }
 
 .generate-button {
-  width: 20%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 6px 14px;
-  border: none;
-  border-radius: 4px;
+  min-width: 160px;
+  padding: 12px 20px;
+  font-size: 1rem;
   font-weight: 600;
+  border: none;
+  border-radius: 6px;
   background-color: black;
   color: white;
-  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   transition: background-color 0.3s ease;
 }
 
 .generate-button:hover {
-  background-color: #1f2937; /* hover:bg-gray-800 */
+  background-color: #6f6f6f;
 }
 
 .generate-button.disabled {
-  background-color: #9ca3af; /* gray-400 */
+  background-color: #9ca3af;
   cursor: not-allowed;
 }
 
-/* .excel-container img {
-  width: 16px;
-  height: 16px;
-  object-fit: contain;
-} */
-
+/* 아이콘 */
 .excel-container img {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   object-fit: contain;
-  vertical-align: middle; /* 글자와 수직 중앙 맞춤 */
+  vertical-align: middle;
   display: inline-block;
-  margin-right: 6px; /* 글자와 간격 */
+  margin-right: 6px;
+}
+
+/* 반응형 */
+@media (max-width: 768px) {
+  .excel-container {
+    padding: 32px 24px;
+  }
+
+  .upload-box {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .button-wrapper {
+    justify-content: center;
+  }
+
+  .generate-button {
+    width: 100%;
+  }
 }

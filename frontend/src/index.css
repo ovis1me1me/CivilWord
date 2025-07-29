@@ -70,3 +70,7 @@ button:focus-visible {
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  font-family: 'Noto Sans KR', sans-serif;
+}

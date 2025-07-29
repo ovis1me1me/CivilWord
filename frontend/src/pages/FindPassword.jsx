@@ -18,8 +18,8 @@ function FindPassword({ onQuestionFound }) {
   };
 
   return (
-    <div className="container">
-      <h2 className="title">Civil Word</h2>
+    <div className="password-container">
+      <h2 className="password-title">Civil Word</h2>
       <input
         type="text"
         placeholder="아이디"
@@ -27,7 +27,7 @@ function FindPassword({ onQuestionFound }) {
         onChange={(e) => setUserId(e.target.value)}
       />
       <button onClick={handleSubmit}>비밀번호 찾기</button>
-      {error && <p className="error">{error}</p>}
+      {error && <p className="password-error">{error}</p>}
     </div>
   );
 }

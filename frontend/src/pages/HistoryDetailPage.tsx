@@ -51,15 +51,15 @@ export default function HistoryDetailPage() {
 
   return (
     <div className="ml-[250px] p-8">
-      <div className="max-w-screen-lg mx-auto bg-white rounded-lg shadow-md p-6 space-y-6">
+      <div className="max-w-screen-lg mx-auto bg-white rounded-lg p-6 space-y-6">
         {/* 민원 제목 */}
-        <h1 className="text-2xl font-bold text-gray-800">{complaint.title}</h1>
+        <h1 className="text-2xl font-bold underline underline-offset-4">{complaint.title}</h1>
 
         {/* 민원 내용 */}
         <div>
-          <h2 className="text-lg font-semibold text-gray-700 mb-2">민원 내용</h2>
-          <div className="bg-zinc-100 p-4 rounded h-64 overflow-y-auto">
-            <p className="whitespace-pre-line text-gray-800">
+          <h2 className="text-lg font-semibold mb-2">민원 내용</h2>
+          <div className="bg-gray-200 p-6 rounded-lg h-64 overflow-y-auto">
+            <p className="whitespace-pre-line">
               {complaint.content}
             </p>
           </div>
@@ -67,16 +67,16 @@ export default function HistoryDetailPage() {
 
         {/* 답변 내용 */}
         <div>
-          <h2 className="text-lg font-semibold text-gray-700 mb-2">저장된 답변</h2>
-          <div className="bg-zinc-100 p-4 rounded h-auto overflow-y-auto">
+          <h2 className="text-lg font-semibold mb-2">저장된 답변</h2>
+          <div className="bg-gray-200 p-6 rounded-lg h-auto overflow-y-auto">
             {complaint.reply_content ? (
               <>
                 {/* 헤더 */}
-                <p className="whitespace-pre-line text-gray-800">
+                <p className="whitespace-pre-line">
                   <span className="font-semibold">{mainSectionCounter++}. </span> {complaint.reply_content.header || '없음'}
                 </p>
                 {/* 요약 */}
-                <p className="whitespace-pre-line text-gray-800 mt-2">
+                <p className="whitespace-pre-line mt-2">
                   <span className="font-semibold">{mainSectionCounter++}. </span> {complaint.reply_content.summary || '없음'}
                 </p>
 
@@ -86,7 +86,7 @@ export default function HistoryDetailPage() {
                     // body의 각 index 항목마다 mainSectionCounter 증가
                     const currentSectionNumber = mainSectionCounter++; 
                     return (
-                      <div key={bodyIndex} className="whitespace-pre-line text-gray-800 mt-2">
+                      <div key={bodyIndex} className="whitespace-pre-line mt-2">
                         <span className="font-semibold">{currentSectionNumber}. </span> 
                         {/* bodyItem.index (본문 소제목) 렌더링 */}
                         {bodyItem.index && (
@@ -112,19 +112,19 @@ export default function HistoryDetailPage() {
                   })
                 ) : (
                   // body가 배열이 아니거나 비어있을 경우 (단순 문자열 등)
-                  <p className="whitespace-pre-line text-gray-800 mt-2">
+                  <p className="whitespace-pre-line mt-2">
                     <span className="font-semibold">{mainSectionCounter++}. </span>
                     {(complaint.reply_content?.body ? String(complaint.reply_content.body) : '본문이 없습니다.')}
                   </p>
                 )}
 
                 {/* 푸터 */}
-                <p className="whitespace-pre-line text-gray-800 mt-2">
+                <p className="whitespace-pre-line mt-2">
                   <span className="font-semibold">{mainSectionCounter++}. </span> {complaint.reply_content.footer || '없음'}
                 </p>
               </>
             ) : (
-              <p className="whitespace-pre-line text-gray-800">답변이 없습니다.</p>
+              <p className="whitespace-pre-line">답변이 없습니다.</p>
             )}
           </div>
         </div>
@@ -133,7 +133,7 @@ export default function HistoryDetailPage() {
         <div className="flex justify-end">
           <button
             onClick={() => navigate('/complaints/history')}
-            className="bg-black text-white text-lg font-semibold px-6 py-2 rounded hover:bg-gray-800 transition"
+            className="bg-black text-white text-md font-semibold px-6 py-2 rounded-lg hover:bg-zinc-600 transition"
           >
             목록으로
           </button>
