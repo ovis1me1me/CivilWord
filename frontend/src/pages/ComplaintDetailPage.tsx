@@ -41,10 +41,10 @@ export default function ComplaintDetailPage() {
       try {
         const numericId = parseInt(id, 10);
 
-        const [complaintRes, summaryRes, similarHistoryRes] = await Promise.all([ // 유사 민원 이력 API 호출 추가
+        // 1️⃣ complaint + summary만 먼저 가져온다
+        const [complaintRes, summaryRes] = await Promise.all([
           fetchComplaintDetail(numericId),
           fetchComplaintSummary(numericId),
-          fetchSimilarHistories(numericId), // 유사 민원 이력 호출
         ]);
 
         const complaintData = complaintRes.data;
@@ -59,13 +59,17 @@ export default function ComplaintDetailPage() {
           answerSummary: replySummary,
         });
 
-        // 유사 민원 이력 데이터를 상태에 저장합니다.
-        setSimilarAnswersList(similarHistoryRes); 
+        // 2️⃣ summary가 있을 때만 유사민원 API 호출
+        if (summary.trim()) {
+          const similarHistoryRes = await fetchSimilarHistories(numericId);
+          setSimilarAnswersList(similarHistoryRes);
+        } else {
+          setSimilarAnswersList([]); // 없을 경우 빈 배열
+        }
 
         setAnswerBlocks([{ summaryTitle: replySummary, answerOptions: ['', '', ''] }]);
       } catch (err) {
-        console.error('데이터 조회 실패:', err); // 에러 메시지를 일반화
-        // 필요에 따라 사용자에게 알림
+        console.error('데이터 조회 실패:', err);
       } finally {
         setIsLoading(false);
       }
