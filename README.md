@@ -98,7 +98,8 @@ source venv/bin/activate</code></pre>
   psql
   DROP DATABASE IF EXISTS civildb;
   CREATE DATABASE civildb OWNER civiluser;
-  CREATE EXTENSION IF NOT EXISTS pg_trgm;
+  \c civildb
+  CREATE INDEX IF NOT EXISTS idx_summary_trgm ON complaint_history USING gin (summary gin_trgm_ops);
   \q
   exit
 
