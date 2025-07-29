@@ -98,6 +98,7 @@ source venv/bin/activate</code></pre>
   psql
   DROP DATABASE IF EXISTS civildb;
   CREATE DATABASE civildb OWNER civiluser;
+  CREATE EXTENSION IF NOT EXISTS pg_trgm;
   \q
   exit
 
