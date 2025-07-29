@@ -66,7 +66,7 @@ async def upload_complaints_excel(
     if not required_columns.issubset(df.columns):
         raise HTTPException(status_code=400, detail=f"다음 컬럼이 포함되어야 합니다: {required_columns}")
 
-    for _, row in df.iterrows():
+    for _, row in df[:-1].iterrows():
         공개여부 = str(row["민원 공개 여부"]).strip()
         if 공개여부 == "공개":
             is_public = True
