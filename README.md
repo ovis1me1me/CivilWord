@@ -115,7 +115,10 @@ source venv/bin/activate</code></pre>
   </li>
 
   <li><strong>FastAPI 서버 실행</strong>
-    <pre><code>uvicorn app.main:app --reload</code></pre>
+    <pre><code>uvicorn app.main:app --host 0.0.0.0 --port 8123</code></pre>
+    프론트
+    cd frontend
+    npm run dev -- --host 0.0.0.0
   </li>
 
   <li><strong>Swagger UI 접속</strong> (브라우저에서 테스트 가능)<br/>
