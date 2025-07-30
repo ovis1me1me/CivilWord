@@ -119,7 +119,9 @@ source venv/bin/activate</code></pre>
     프론트
     cd frontend
     npm run dev -- --host 0.0.0.0
+  </code></pre>
   </li>
+  
 
   <li><strong>Swagger UI 접속</strong> (브라우저에서 테스트 가능)<br/>
     👉 <a href="http://127.0.0.1:8000/docs" target="_blank">http://127.0.0.1:8000/docs</a>
