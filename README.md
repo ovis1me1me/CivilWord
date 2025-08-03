@@ -126,11 +126,22 @@ source venv/bin/activate</code></pre>
   
 
   <li><strong>FastAPI 서버 실행</strong>
-    <pre><code>uvicorn app.main:app --host 0.0.0.0 --port 8123</code></pre>
+    <pre><code>
+      uvicorn app.main:app --reload # 테스트용
+      uvicorn app.main:app --host 0.0.0.0 --port 8123 # 배포용
+    </code></pre>
     프론트
     cd frontend
     npm run dev -- --host 0.0.0.0
   </code></pre>
+  </li>
+
+  <li><strong>프론트 실행</strong>
+    <pre><code>
+      cd frontend
+      npm run dev # 테스트용 
+      npm run dev -- --host 0.0.0.0 # 배포용
+    </code></pre>
   </li>
   
 
