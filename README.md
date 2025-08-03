@@ -98,14 +98,11 @@ source venv/bin/activate</code></pre>
   psql
   DROP DATABASE IF EXISTS civildb;
   CREATE DATABASE civildb OWNER civiluser;
-  \c civildb
-  CREATE INDEX IF NOT EXISTS idx_summary_trgm ON complaint_history USING gin (summary gin_trgm_ops);
   \q
   exit
-
   </code></pre> 
   </li>
-  
+
   <li><strong>데이터베이스 초기화 및 더미데이터 생성</strong>
     <pre><code>
       python3 reset_tables.py
@@ -113,6 +110,20 @@ source venv/bin/activate</code></pre>
       python3 create_dummy.py
     </code></pre>
   </li>
+  <li>
+      <strong>검색 인덱스 생성</strong>
+  <pre><code>
+  sudo -i -u postgres
+  psql
+  \c civildb
+  CREATE EXTENSION IF NOT EXISTS pg_trgm;
+  CREATE INDEX IF NOT EXISTS idx_summary_trgm ON complaint_history USING gin (summary gin_trgm_ops);
+  \q
+  exit
+
+  </code></pre> 
+  </li>
+  
 
   <li><strong>FastAPI 서버 실행</strong>
     <pre><code>uvicorn app.main:app --host 0.0.0.0 --port 8123</code></pre>
