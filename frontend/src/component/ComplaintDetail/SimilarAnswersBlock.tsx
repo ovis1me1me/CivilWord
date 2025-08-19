@@ -4,11 +4,12 @@ interface SimilarAnswersBlockProps {
   index: number;
   similarAnswers: { title: string; summary: string; content: string }[];
   containerHeight?: number;
+  onSelect?: (answerItem: { title: string; summary: string; content: string }) => void;
 }
 
 const labels = ['가', '나', '다', '라', '마', '바', '사', '아', '자', '차', '카', '타', '파', '하']; // 한글 라벨
 
-export default function SimilarAnswersBlock({ index, similarAnswers, containerHeight }: SimilarAnswersBlockProps) {
+export default function SimilarAnswersBlock({ index, similarAnswers, containerHeight, onSelect }: SimilarAnswersBlockProps) {
   // 유사 민원이 없을 경우 메시지 표시
   if (!similarAnswers || similarAnswers.length === 0) {
     return (
@@ -58,8 +59,23 @@ export default function SimilarAnswersBlock({ index, similarAnswers, containerHe
             return (
               <div
                 key={itemIndex}
-                className="grid bg-gray-100 border rounded-lg p-4 mb-4"
+                className="relative grid bg-gray-100 border rounded-lg p-4 mb-4 pr-14"
               >
+                {/* ‘답변 선택’ 버튼 */}
+                <button
+                  type="button"
+                  onClick={() => onSelect && onSelect(answerItem)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2
+                            w-10 h-10 rounded-full
+                            bg-black text-white text-xs font-semibold
+                            flex items-center justify-center shadow-md
+                            hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-black/40"
+                  aria-label={`답변 선택: ${answerItem.title}`}
+                  title="답변 선택"
+                >
+                  답변선택
+                </button>
+
                 {/* 1. 민원 요지 */}
                 <div className="flex flex-col mb-3"> {/* flex-col로 변경하여 레이블과 내용 분리 */}
                   <span className="font-bold text-gray-700 mb-1">민원 요지 :</span>

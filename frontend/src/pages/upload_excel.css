@@ -137,3 +137,44 @@
     width: 100%;
   }
 }
+
+/* ====== 추가 패치: 탭/드랍존/필드 ====== */
+
+/* 탭 전환 */
+.tab-switcher { display: inline-flex; gap: 6px; margin: 10px 0 16px; }
+.tab {
+  padding: 8px 14px; border: 1px solid #e5e7eb; border-radius: 999px;
+  background: #fff; color: #374151; font-weight: 600;
+}
+.tab.active { background: #111827; color: #fff; border-color: #111827; }
+
+/* 드래그&드랍 표시 (upload-box 재사용) */
+.dropzone { cursor: pointer; }
+.dropzone.dragover { background-color: #f5f5ff; outline: 2px dashed #6366f1; }
+
+/* 단일 입력 폼 */
+.single-panel { background: #f8f8f8; border-radius: 8px; padding: 18px; }
+.field { display: flex; flex-direction: column; gap: 8px; margin: 14px 0; }
+.field-row { display: flex; align-items: center; justify-content: space-between; }
+.field-label { font-weight: 600; color: #374151; }
+
+.text-input, .text-area {
+  width: 100%; padding: 12px; box-sizing: border-box;
+  border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; color: #111827;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+.text-input:focus, .text-area:focus { outline: none; border-color: #111827; }
+
+.public-row { display: flex; align-items: center; gap: 6px; }
+.check-label { color: #374151; }
+
+/* 보조 버튼 */
+.btn-secondary {
+  border: 1px solid #d1d5db; border-radius: 6px; padding: 8px 12px;
+  background: #fff; color: #374151; font-weight: 600;
+}
+.btn-secondary:hover { background: #f3f4f6; }
+
+/* 에러 */
+.error-text { color: #ef4444; }
+

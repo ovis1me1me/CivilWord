@@ -1,4 +1,5 @@
 import axios, { InternalAxiosRequestConfig } from "axios";
+import { ComplaintDetail } from "../types/complaint";
 
 /** ✅ Axios 인스턴스 생성 */
 const instance = axios.create({
@@ -65,9 +66,57 @@ export const downloadSelectedComplaints = (ids: number[]) =>
     responseType: 'blob', // 👉 파일 다운로드는 blob
   });
 
+  /**
+ * 내부: 백엔드 DTO → 프론트 타입 정규화
+ * - snake_case → camelCase
+ * - 안전한 기본값 채우기
+ */
+function normalizeComplaintDetailDTO(dto: any): ComplaintDetail {
+  // saved_answer_summary.blocks를 our shape로 맵핑
+  const blocks = dto?.saved_answer_summary?.blocks;
+  const answerBlocks = Array.isArray(blocks)
+    ? blocks.map((b: any) => ({
+        summaryTitle: String(b?.summaryTitle ?? b?.index ?? '').trim(),
+        answerOptions: Array.isArray(b?.answerOptions)
+          ? b.answerOptions.map((s: any) => String(s ?? ''))
+          : Array.isArray(b?.section)
+            ? b.section
+                .map((s: any) =>
+                  typeof s?.text === 'string'
+                    ? s.text
+                    : (typeof s === 'string' ? s : '')
+                )
+                .filter((t: string) => t.length > 0)
+            : [],
+      }))
+    : undefined;
+
+  const longSummary = String(dto?.long_summary ?? '');
+  const shortSummary = String(dto?.short_summary ?? '');
+
+  return {
+    id: Number(dto?.id ?? 0),
+    title: String(dto?.title ?? ''),
+    content: String(dto?.content ?? ''),
+
+    // ✅ ComplaintDetail의 필수 필드 채우기
+    summary: longSummary || String(dto?.summary ?? ''),         // 표시용: 긴 요약 우선, 없으면 기존 summary
+    answerSummary: String(dto?.answer_summary ?? ''),           // 편집 저장본이 별도로 온다면 매핑, 없으면 ''
+
+    // ✅ 선택 필드들
+    longSummary,    // 민원요지(긴)
+    shortSummary,   // 답변요지 타이틀(짧은)
+    answerBlocks,
+  };
+}
+
 /** ✅ 민원 상세 조회 ------------------------------------------------------- 7/21 추가 */
-export const fetchComplaintDetail = (id: number) =>
-  instance.get(`/complaints/${id}`);
+export const fetchComplaintDetail = async (id: number) => {
+  const res = await instance.get(`/complaints/${id}`);
+  const data: ComplaintDetail = normalizeComplaintDetailDTO(res.data);
+  // ⚠️ 기존 코드 호환: complaintRes.data 형태 유지
+  return { data };
+};
 
 /** ✅ 5️. 민원 답변 생성 */
 export const generateReply = (id: number, answerSummary: object) =>
@@ -149,6 +198,16 @@ export const fetchSimilarHistories = async (id: number) => {
   const response = await instance.get(`/complaints/${id}/history-similar`);
   return response.data;
 };
+
+/** ✅ 20. 단일 민원 등록(제목/내용/공개여부) */
+export interface CreateComplaintPayload {
+  title: string;
+  content: string;
+  is_public: boolean; // 백엔드 필드명이 다르면 여기를 맞춰주세요 (e.g. isPublic)
+}
+
+export const createComplaint = (payload: CreateComplaintPayload) =>
+  instance.post('/complaints', payload);
 
 
 /** ✅ 기본 axios 인스턴스 export */

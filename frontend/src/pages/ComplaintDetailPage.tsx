@@ -41,33 +41,50 @@ export default function ComplaintDetailPage() {
       try {
         const numericId = parseInt(id, 10);
 
-        // 1️⃣ complaint + summary만 먼저 가져온다
+        // 기존 로직 유지 (detail + summary 병렬 호출)
         const [complaintRes, summaryRes] = await Promise.all([
           fetchComplaintDetail(numericId),
           fetchComplaintSummary(numericId),
         ]);
 
-        const complaintData = complaintRes.data;
-        const summary = summaryRes.data.summary || '';
-        const replySummary = '';
+        const detail = complaintRes.data; // ComplaintDetail (확장 필드 있을 수도)
+        const shortSummary = summaryRes.data?.summary || ''; // 편집용(짧은)
+        const longSummary =
+          detail.longSummary // 백엔드가 이미 주면 사용
+          || "민원 요지(더미데이터)"; // 표시용(긴) - 백엔드 준비 전 임시
 
         setComplaint({
-          id: complaintData.id,
-          title: complaintData.title,
-          content: complaintData.content,
-          summary: summary,
-          answerSummary: replySummary,
-        });
+          id: detail.id,
+          title: detail.title,
+          content: detail.content,
+          // 화면 표시는 longSummary를 우선 사용 (없으면 기존 summary/더미)
+          summary: longSummary,
 
-        // 2️⃣ summary가 있을 때만 유사민원 API 호출
-        if (summary.trim()) {
+          // 답변요지(사용자 입력) — 기존 필드 유지 (화면엔 쓰지 않더라도 타입 맞춤)
+          answerSummary: detail.answerSummary ?? '',
+
+          // 확장 필드(있으면 함께 보관)
+          longSummary,
+          shortSummary,                // 답변요지 타이틀 초기값
+          answerBlocks: detail.answerBlocks, // 저장본 있으면 복원에 사용
+        } as ComplaintDetail);
+
+        // 저장본이 있으면 우선 복원, 없으면 shortSummary로 초기화
+        if (detail.answerBlocks?.length) {
+          setAnswerBlocks(detail.answerBlocks);
+        } else {
+          setAnswerBlocks([
+            { summaryTitle: shortSummary, answerOptions: ['', '', ''] },
+          ]);
+        }
+
+        // 유사민원 호출 기준도 편집용 요약 존재 여부로
+        if (shortSummary.trim()) {
           const similarHistoryRes = await fetchSimilarHistories(numericId);
           setSimilarAnswersList(similarHistoryRes);
         } else {
-          setSimilarAnswersList([]); // 없을 경우 빈 배열
+          setSimilarAnswersList([]);
         }
-
-        setAnswerBlocks([{ summaryTitle: replySummary, answerOptions: ['', '', ''] }]);
       } catch (err) {
         console.error('데이터 조회 실패:', err);
       } finally {
@@ -152,6 +169,59 @@ export default function ComplaintDetailPage() {
       )
     );
   };
+  
+  // ✅ 유사민원 ‘답변 선택’ 시, 답변 요지로 그대로 매핑
+  const handleSelectSimilarAnswer = (
+    answerItem: { title: string; summary: string; content: string }
+  ) => {
+
+    let parsed: any = null;
+    try {
+      parsed = typeof answerItem.content === 'string' 
+        ? JSON.parse(answerItem.content) 
+        : answerItem.content;
+    } catch (e) {
+      console.error('유사민원 content 파싱 실패:', e, answerItem.content);
+    }
+
+    const body: any[] = parsed?.body && Array.isArray(parsed.body) ? parsed.body : [];
+
+    // body가 없으면 무시
+    if (body.length === 0) {
+      alert('선택한 유사민원에 변환 가능한 답변 구조(body)가 없습니다.');
+      return;
+    }
+
+    // bodySection → answerBlocks 요소로 변환
+    const mapped = body.map((bs: any) => {
+      const title = (bs?.index ?? '').toString().trim();
+      const options: string[] = Array.isArray(bs?.section)
+        ? bs.section
+            .map((s: any) =>
+              typeof s?.text === 'string' ? s.text.trim() 
+              : (typeof s === 'string' ? s.trim() : '')
+            )
+            .filter((t: string) => t.length > 0)
+        : [];
+
+      return {
+        summaryTitle: title,
+        answerOptions: options.length > 0 ? options : [''],
+      };
+    }).filter((b: any) => b.summaryTitle !== '' || b.answerOptions.some((o: string) => o.trim() !== ''));
+
+    if (mapped.length === 0) {
+      alert('복사할 답변 요지가 없습니다.');
+      return;
+    }
+
+    setAnswerBlocks(mapped);
+
+    // 선택 직후 오른쪽 영역으로 스크롤(선택)
+    setTimeout(() => {
+      answerContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 0);
+  };
 
   // 답변 생성
   const handleGenerateAnswer = async () => {
@@ -227,7 +297,7 @@ export default function ComplaintDetailPage() {
       <div className="p-4 max-w-[1000px] mx-auto space-y-6 relative">
         <Header title={complaint.title} />
         <ContentBox label="민원 내용" content={complaint.content} />
-        <ContentBox label="민원 요지" content={complaint.summary} />
+        <ContentBox label="민원 요지" content={complaint.longSummary ?? complaint.summary} />
 
         <div className="grid md:grid-cols-2 gap-6 max-w-[1000px] mx-auto">
           {/* similarAnswersList를 그대로 전달합니다. */}
@@ -235,6 +305,7 @@ export default function ComplaintDetailPage() {
             index={0}
             similarAnswers={similarAnswersList} 
             containerHeight={answerHeight}
+            onSelect={handleSelectSimilarAnswer}
           />
 
           <div ref={answerContainerRef} className="flex flex-col gap-6">
