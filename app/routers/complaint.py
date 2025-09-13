@@ -66,7 +66,7 @@ async def upload_complaints_excel(
     if not required_columns.issubset(df.columns):
         raise HTTPException(status_code=400, detail=f"다음 컬럼이 포함되어야 합니다: {required_columns}")
 
-    for _, row in df[::-1].iterrows():
+    for _, row in df.iterrows():
         공개여부 = str(row["민원 공개 여부"]).strip()
         if 공개여부 == "공개":
             is_public = True
@@ -570,7 +570,7 @@ def get_similar_histories(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # 1. 본인 민원인지 확인
+    # 1. 본인 민원 확인
     complaint = db.query(Complaint).filter(
         Complaint.id == id,
         Complaint.user_uid == current_user.user_uid
@@ -578,41 +578,28 @@ def get_similar_histories(
     if not complaint:
         raise HTTPException(status_code=404, detail="해당 민원이 없거나 권한이 없습니다.")
 
-    # 2. 기존에 저장된 유사민원 있으면 그것 반환
+    # 2. 이미 저장된 유사민원 존재 시 -> 로그 찍고 리턴
     existing = db.query(SimilarHistory).filter(SimilarHistory.complaint_id == id).all()
     if existing:
-        logger.info(f"[유사민원] complaint_id={id} → 저장된 {len(existing)}건 반환")
-        return [
-            {
-                "title": item.title,
-                "summary": item.summary,
-                "content": json.loads(item.content)
-            }
-            for item in existing
-        ]
+        logger.info(f"[유사민원] complaint_id={id} → 이미 저장된 유사 민원 {len(existing)}건 사용")
+        return [{"title": item.title, "summary": item.summary, "content": json.loads(item.content)} for item in existing]
 
-    # 3. summary 없으면 빈 배열 반환
-    if not complaint.summary:
-        logger.warning(f"[유사민원] complaint_id={id} → summary 없음 → 빈 배열 반환")
-        return []
-
-    # 4. 유사도 기반 쿼리 (pg_trgm + 명시적 CAST)
+    # 3. 유사 민원 임시 쿼리
+    sql = text("""
+        SELECT title, summary, reply_content
+        FROM complaint_history
+        WHERE is_public = TRUE
+          AND summary IS NOT NULL
+          AND reply_content IS NOT NULL
+        ORDER BY id DESC
+        LIMIT 2
+    """)
     try:
-        sql = text("""
-            SELECT title, summary, reply_content
-            FROM complaint_history
-            WHERE summary IS NOT NULL
-            AND reply_content IS NOT NULL
-            ORDER BY similarity((title || ' ' || summary), CAST(:input_summary AS text)) DESC
-            LIMIT 3
-        """)
-        rows = db.execute(sql, {"input_summary": complaint.summary}).fetchall()
+        rows = db.execute(sql).fetchall()
     except Exception as e:
-        db.rollback()
-        logger.exception("[유사민원] SQL 실행 에러")
         raise HTTPException(status_code=500, detail=f"유사 민원 쿼리 실패: {str(e)}")
 
-    # 5. 새로 찾은 결과 저장
+    # 4. 저장
     for row in rows:
         db.add(SimilarHistory(
             complaint_id=id,
@@ -622,22 +609,8 @@ def get_similar_histories(
         ))
     db.commit()
 
-    # 6. 안전한 JSON 파싱
-    def safe_json(value):
-        try:
-            return json.loads(value)
-        except:
-            return value
-
-    # 7. 결과 반환
-    return [
-        {
-            "title": row.title,
-            "summary": row.summary,
-            "content": safe_json(row.reply_content)
-        }
-        for row in rows
-    ]
+    # 5. 리턴
+    return [{"title": row.title, "summary": row.summary, "content": json.loads(row.reply_content)} for row in rows]
 
 @router.get("/admin/public-histories", response_model=List[ReplyBase])
 def get_public_histories(db: Session = Depends(get_db)):

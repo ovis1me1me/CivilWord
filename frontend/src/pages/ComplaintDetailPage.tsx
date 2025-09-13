@@ -67,7 +67,7 @@ export default function ComplaintDetailPage() {
           setSimilarAnswersList([]); // 없을 경우 빈 배열
         }
 
-        setAnswerBlocks([{ summaryTitle: replySummary, answerOptions: ['', '', ''] }]);
+        setAnswerBlocks([{ summaryTitle: replySummary, answerOptions: [''] }]);
       } catch (err) {
         console.error('데이터 조회 실패:', err);
       } finally {
@@ -97,7 +97,7 @@ export default function ComplaintDetailPage() {
   const handleAddSummary = () => {
     setAnswerBlocks(prev => [
       ...prev,
-      { summaryTitle: '', answerOptions: ['','',''] },
+      { summaryTitle: '', answerOptions: [''] },
     ]);
   };
 
@@ -171,10 +171,9 @@ export default function ComplaintDetailPage() {
     try {
       const numericId = parseInt(id, 10);
 
-      // Define the labels array here
-      const labels = ['가', '나', '다', '라', '마', '바', '사', '아', '자', '차', '카', '타', '파', '하'];
+      // 라벨 수정
+      const labels = ['•'];
 
-      // Construct the payload
       const payload = {
         answer_summary: answerBlocks
           .map((block) => {
@@ -187,8 +186,8 @@ export default function ComplaintDetailPage() {
             }
 
             return {
-              index: block.summaryTitle, // 'review'를 'index'로 변경
-              section: filledOptions.map((opt, index) => ({ // 'sections'를 'section'으로 변경
+              index: block.summaryTitle,
+              section: filledOptions.map((opt, index) => ({
                 title: labels[index] || '',
                 text: opt,
               })),
@@ -203,7 +202,7 @@ export default function ComplaintDetailPage() {
       // 답변 요지 저장
       await saveReplySummary(numericId, payload);
 
-      // 2) 답변 1회 생성 API 호출 (JWT 인증 필요)
+      // 답변 1회 생성 API 호출 (JWT 인증 필요)
       const replyResponse = await generateReply(numericId, payload);
       console.log('생성된 답변:', replyResponse.data);
 

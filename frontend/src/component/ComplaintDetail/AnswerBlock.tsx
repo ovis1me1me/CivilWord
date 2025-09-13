@@ -22,7 +22,7 @@ export default function AnswerBlock({
   onAnswerChange,
   onAddSummary,
 }: AnswerBlockProps) {
-  const labels = ['가', '나', '다', '라', '마', '바', '사', '아', '자', '차', '카', '타', '파', '하'];
+  const labels = ['•'];
 
   const summaryTextareaRef = useRef<HTMLTextAreaElement>(null);
   const answerTextareaRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
@@ -83,7 +83,7 @@ export default function AnswerBlock({
               <Minus className="w-5 h-5" />
             </button>
 
-            <span className="w-5 font-bold pt-1 flex-shrink-0">{labels[i] || '•'}.</span>
+            <span className="w-5 font-bold pt-1 flex-shrink-0">{labels[i] || '•'}</span>
             <textarea
               // 이 부분을 수정했습니다.
               ref={(el: HTMLTextAreaElement | null) => {
@@ -94,7 +94,7 @@ export default function AnswerBlock({
               onInput={(e) => adjustTextareaHeight(e.currentTarget)}
               placeholder="답변의 요지를 입력하세요."
               className="flex-1 p-2 border border-gray-300 rounded-lg bg-white text-sm resize-none overflow-hidden"
-              rows={1}
+              rows={7}
             />
           </div>
         ))}

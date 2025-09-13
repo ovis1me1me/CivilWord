@@ -9,6 +9,7 @@ function UploadExcel() {
   const [fileName, setFileName] = useState('');
   const [fileObj, setFileObj] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isDragging, setIsDragging] = useState(false); // ✅ 드래그 상태
   const navigate = useNavigate();
 
   const handleFileChange = (e) => {
@@ -19,6 +20,25 @@ function UploadExcel() {
     }
   };
 
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const droppedFile = e.dataTransfer.files?.[0];
+    if (droppedFile) {
+      setFileName(droppedFile.name);
+      setFileObj(droppedFile);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
   const handleSubmit = async () => {
     if (!fileObj) {
       alert('파일을 선택해주세요.');
@@ -27,7 +47,7 @@ function UploadExcel() {
 
     try {
       setIsGenerating(true);
-      const response = await uploadExcelFile(fileObj); // ✅ axios 함수 호출
+      const response = await uploadExcelFile(fileObj);
       alert(response.data.message);
       navigate('/complaints');
     } catch (error) {
@@ -51,10 +71,16 @@ function UploadExcel() {
           <span> Excel 양식.xlsx</span>
         </a>
 
-        <div className="upload-box">
+        {/* ✅ 드래그 앤 드롭 박스 */}
+        <div
+          className={`upload-box ${isDragging ? 'dragging' : ''}`}
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+        >
           <label htmlFor="excel-upload" className="upload-label">
             <img src={file} alt="파일 아이콘" />
-            {!fileName && <span> Excel 파일 삽입</span>}
+            {!fileName && <span> 파일을 선택하거나 끌어오세요.</span>}
           </label>
           <input
             id="excel-upload"

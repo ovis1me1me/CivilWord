@@ -57,6 +57,12 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+  cursor: pointer;
+}
+
+.upload-box.dragging {
+  border-color: #007bff;
+  background-color: #f0f8ff;
 }
 
 .upload-label {
