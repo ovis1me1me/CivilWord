@@ -4,11 +4,12 @@ interface SimilarAnswersBlockProps {
   index: number;
   similarAnswers: { title: string; summary: string; content: string }[];
   containerHeight?: number;
+  onSelect?: (payload: { summaryTitle: string; answerOptions: string[] }) => void;
 }
 
 const labels = ['가', '나', '다', '라', '마', '바', '사', '아', '자', '차', '카', '타', '파', '하']; // 한글 라벨
 
-export default function SimilarAnswersBlock({ index, similarAnswers, containerHeight }: SimilarAnswersBlockProps) {
+export default function SimilarAnswersBlock({ index, similarAnswers, containerHeight, onSelect }: SimilarAnswersBlockProps) {
   // 유사 민원이 없을 경우 메시지 표시
   if (!similarAnswers || similarAnswers.length === 0) {
     return (
@@ -54,6 +55,27 @@ export default function SimilarAnswersBlock({ index, similarAnswers, containerHe
             const bodySections = parsedContent?.body && Array.isArray(parsedContent.body)
               ? parsedContent.body
               : [];
+            const firstBody = bodySections?.[0];
+
+            const summaryTitle = 
+              typeof firstBody?.index === 'string' && firstBody.index.trim()
+                ? firstBody.index.trim()
+                : // fallback (없을 때만)
+                  (typeof answerItem.summary === 'string'
+                    ? answerItem.summary
+                    : JSON.stringify(answerItem.summary));
+
+            // 규칙:
+            // - body[0]?.section 안의 항목들을 '가/나/다...' 순서대로 answerOptions로 매핑
+            // - 없으면 content 문자열 하나로 대체
+            const answerOptions: string[] =
+              Array.isArray(firstBody?.section)
+                ? firstBody.section
+                    .map((s: any) => (typeof s?.text === 'string' ? s.text.trim() : ''))
+                    .filter((t: string) => t.length > 0)
+                : (typeof answerItem.content === 'string' && answerItem.content.trim()
+                    ? [answerItem.content.trim()]
+                    : []);
 
             return (
               <div
@@ -69,38 +91,45 @@ export default function SimilarAnswersBlock({ index, similarAnswers, containerHe
                 </div>
 
                 {/* 2. 답변 내용 */}
-                <div className="flex flex-col"> {/* flex-col 유지 */}
-                  <span className="font-bold text-gray-700 mb-2">답변 내용 :</span> {/* 간격 조정 */}
-                  
-                  {bodySections.length > 0 ? (
-                    bodySections.map((bodySectionItem, bodyIndex) => (
+                <div className="flex flex-col">
+                  <span className="font-bold text-gray-700 mb-2">답변 내용 :</span>
+                  {Array.isArray(bodySections) && bodySections.length > 0 ? (
+                    bodySections.map((b, bodyIndex) => (
                       <React.Fragment key={bodyIndex}>
-                        {/* 답변의 첫 번째 줄 (예: "1. 가로등 고장으로 ...") */}
-                        {/* 글씨 굵기를 font-semibold로, 크기는 base(기본)로 조정하여 과도하게 크지 않게 */}
-                        <div className="font-semibold text-gray-800 mb-1 pl-2"> {/* 약간의 들여쓰기 */}
-                            {/* bodyIndex + 1은 항상 숫자이므로 .을 붙여줍니다. */}
-                            <span>{bodyIndex + 1}. {bodySectionItem.index}</span>
+                        <div className="font-semibold text-gray-800 mb-1 pl-2">
+                          {bodyIndex + 1}. {b.index}
                         </div>
-
-                        {/* 실제 답변 내용 (예: "가. 귀하께서 신고하신...") */}
-                        {bodySectionItem.section && Array.isArray(bodySectionItem.section) && bodySectionItem.section.length > 0 ? (
-                            bodySectionItem.section.map((subSectionItem, subIndex) => (
-                                <div key={`${bodyIndex}-${subIndex}`} className="flex items-start gap-2 ml-6 text-gray-600"> {/* 들여쓰기 더 깊게, 색상 조정 */}
-                                    {/* '가.' 형태의 번호는 labels 배열에서 가져옵니다. */}
-                                    <span className="font-bold">{labels[subIndex] || '•'}.</span>
-                                    <span>{subSectionItem.text}</span>
-                                </div>
-                            ))
-                        ) : (
-                            <div className="flex items-start gap-2 ml-6 text-gray-600">
-                                <span>{bodySectionItem.section ? JSON.stringify(bodySectionItem.section) : "내용 없음"}</span>
+                        {Array.isArray(b.section) && b.section.length > 0 ? (
+                          b.section.map((sub: any, subIndex: number) => (
+                            <div key={`${bodyIndex}-${subIndex}`} className="flex items-start gap-2 ml-6 text-gray-600">
+                              <span className="font-bold">{labels[subIndex] || '•'}.</span>
+                              <span>{sub?.text}</span>
                             </div>
+                          ))
+                        ) : (
+                          <div className="ml-6 text-gray-600">내용 없음</div>
                         )}
                       </React.Fragment>
                     ))
                   ) : (
-                    <p className="text-gray-600 pl-4">{typeof answerItem.content === 'object' ? JSON.stringify(answerItem.content) : answerItem.content}</p>
+                    <p className="text-gray-600 pl-4">
+                      {typeof answerItem.content === 'object'
+                        ? JSON.stringify(answerItem.content)
+                        : answerItem.content}
+                    </p>
                   )}
+                </div>
+
+                {/* ✅ 답변 선택 버튼 */}
+                <div className="absolute top-1/2 right-2 -translate-y-1/2">
+                  <button
+                    type="button"
+                    onClick={() => onSelect?.({ summaryTitle, answerOptions })}
+                    className="px-3 py-1.5 rounded-full text-sm font-semibold bg-black text-white hover:bg-zinc-700 transition"
+                    title="이 유사 민원의 요지를 답변 요지에 채워 넣습니다"
+                  >
+                    답변<br/>선택
+                  </button>
                 </div>
               </div>
             );
