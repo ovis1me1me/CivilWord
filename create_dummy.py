@@ -91,6 +91,7 @@ def create_dummy_data():
                     is_public=random.choice([True, False]),
                     created_at=created_at,
                     summary=content[:50] + "...",
+                    long_summary={"text": content},  
                     reply_summary=None,  # ✅ 요약 비움
                     reply_status="답변전",
                 )

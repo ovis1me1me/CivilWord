@@ -45,7 +45,40 @@ def get_db():
     finally:
         db.close()
 
+# 단일 민원 생성 라우터
+@router.post("/complaints")
+def create_complaint(
+    payload: ComplaintCreate = Body(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # 기본 검증
+    title = (payload.title or "").strip()
+    content = (payload.content or "").strip()
+    if not title or not content:
+        raise HTTPException(status_code=400, detail="title과 content는 비어 있을 수 없습니다.")
 
+    is_public = bool(payload.is_public) if payload.is_public is not None else False
+
+    # DB 저장
+    complaint = Complaint(
+        user_uid=current_user.user_uid,
+        title=title,
+        content=content,
+        is_public=is_public,
+        created_at=datetime.utcnow(),
+        reply_summary={},  # 단일 입력 모드는 초기값 비움
+    )
+    db.add(COMPlaint)  # <-- 오타 주의: 아래 줄로 교체하세요
+    # db.add(complaint)
+    db.commit()
+    db.refresh(complaint)
+
+    return {
+        "id": complaint.id,
+        "message": "민원이 생성되었습니다."
+    }
+    
 #1. 엑셀 업로드 라우터 (동적 URL보다 먼저 등록)
 # [complaint]에 민원요약, 답변요약 비우고 저장
 @router.post("/complaints/upload-excel", response_model=ResponseMessage)
