@@ -30,6 +30,7 @@ class Complaint(Base):
     is_public = Column(Boolean, default=False)   # 공개 여부
     created_at = Column(DateTime, default=datetime.utcnow)
     summary = Column(Text, nullable=True)   # 민원 요지
+    long_summary = Column(Text, nullable=True)  # 긴 민원 요지
     
     reply_summary = Column(JSONB, nullable=True)
 

@@ -11,7 +11,7 @@ from app.models.user import User
 from app.models import UserInfo 
 from app.database import SessionLocal
 from typing import List, Optional
-from app.schemas.complaint import ComplaintReplySummaryResponse, ReplyStatusUpdateRequest
+from app.schemas.complaint import ComplaintReplySummaryResponse,ComplaintSummaryResponse, ReplyStatusUpdateRequest
 from app.schemas.response_message import ResponseMessage
 from app.auth import get_current_user
 from datetime import datetime
@@ -481,7 +481,7 @@ def get_all_replies(
 
 # 9. 민원 요약(LLM) 라우터(없으면 생성 후 반환)
 #[complaint]의 content를 input하여  LLM모델로 summary 생성
-@router.get("/complaints/{id}/summary", response_model=ComplaintReplySummaryResponse)
+@router.get("/complaints/{id}/summary", response_model=ComplaintSummaryResponse)
 def get_complaint_summary(
     id: int,
     db: Session = Depends(get_db),
@@ -504,10 +504,20 @@ def get_complaint_summary(
     else:
         complaint_summary = complaint.summary
 
-    return ComplaintReplySummaryResponse(
+    # 긴 요약이 없을 때만 생성
+    if not complaint.long_summary:
+        complaint_long_summary = summarize_with_blossom(complaint.content)
+        complaint.long_summary = complaint_long_summary
+        db.commit()
+        db.refresh(complaint)
+    else:
+        complaint_long_summary = complaint.long_summary
+
+    return ComplaintSummaryResponse(
         title=complaint.title,
         content=complaint.content,
-        summary=complaint_summary
+        summary=complaint_summary,
+        long_summary=complaint_long_summary
     )
 
 
@@ -603,7 +613,7 @@ def get_similar_histories(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # 1. 본인 민원인지 확인
+    # 1) 본인 민원 확인
     complaint = db.query(Complaint).filter(
         Complaint.id == id,
         Complaint.user_uid == current_user.user_uid
@@ -611,65 +621,127 @@ def get_similar_histories(
     if not complaint:
         raise HTTPException(status_code=404, detail="해당 민원이 없거나 권한이 없습니다.")
 
-    # 2. 기존에 저장된 유사민원 있으면 그것 반환
+    # 2) 기존 저장된 결과 있으면 반환
     existing = db.query(SimilarHistory).filter(SimilarHistory.complaint_id == id).all()
     if existing:
         logger.info(f"[유사민원] complaint_id={id} → 저장된 {len(existing)}건 반환")
-        return [
-            {
-                "title": item.title,
-                "summary": item.summary,
-                "content": json.loads(item.content)
-            }
-            for item in existing
-        ]
+        def _safe_load(s):
+            try:
+                return json.loads(s) if isinstance(s, str) else s
+            except:
+                return {"raw": s}
+        return [{"title": x.title, "summary": x.summary, "content": _safe_load(x.content)} for x in existing]
 
-    # 3. summary 없으면 빈 배열 반환
+    # 3) 요약 없으면 빈 배열
     if not complaint.summary:
         logger.warning(f"[유사민원] complaint_id={id} → summary 없음 → 빈 배열 반환")
         return []
 
-    # 4. 유사도 기반 쿼리 (pg_trgm + 명시적 CAST)
+    rows = []
+    summary_txt = complaint.summary
+
+    # ---------- (A) pg_trgm 사용 시도 ----------
     try:
-        sql = text("""
+        # superuser 아니면 실패 가능 → 무시
+        try:
+            db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm"))
+            db.commit()
+        except Exception as ext_e:
+            db.rollback()
+            logger.warning(f"[유사민원] pg_trgm 활성화 실패(무시): {ext_e}")
+
+        sql_trgm = text("""
             SELECT title, summary, reply_content
             FROM complaint_history
             WHERE summary IS NOT NULL
-            AND reply_content IS NOT NULL
-            ORDER BY similarity((title || ' ' || summary), CAST(:input_summary AS text)) DESC
+              AND reply_content IS NOT NULL
+            ORDER BY similarity(
+                COALESCE(title,'') || ' ' || COALESCE(summary,''),
+                CAST(:input_summary AS text)
+            ) DESC
             LIMIT 3
         """)
-        rows = db.execute(sql, {"input_summary": complaint.summary}).fetchall()
-    except Exception as e:
+        rows = db.execute(sql_trgm, {"input_summary": summary_txt}).fetchall()
+        logger.info(f"[유사민원] pg_trgm(similarity)로 {len(rows)}건 조회")
+    except Exception as e_trgm:
         db.rollback()
-        logger.exception("[유사민원] SQL 실행 에러")
-        raise HTTPException(status_code=500, detail=f"유사 민원 쿼리 실패: {str(e)}")
+        logger.warning(f"[유사민원] similarity 실패 → FTS로 대체: {e_trgm}")
 
-    # 5. 새로 찾은 결과 저장
-    for row in rows:
-        db.add(SimilarHistory(
-            complaint_id=id,
-            title=row.title,
-            summary=row.summary,
-            content=json.dumps(row.reply_content)
-        ))
-    db.commit()
+        # ---------- (B) Full-Text Search 폴백 ----------
+        try:
+            sql_fts = text("""
+                SELECT title, summary, reply_content
+                FROM complaint_history
+                WHERE summary IS NOT NULL
+                  AND reply_content IS NOT NULL
+                ORDER BY ts_rank_cd(
+                    to_tsvector('simple', COALESCE(title,'') || ' ' || COALESCE(summary,'')),
+                    plainto_tsquery('simple', CAST(:input_summary AS text))
+                ) DESC
+                LIMIT 3
+            """)
+            rows = db.execute(sql_fts, {"input_summary": summary_txt}).fetchall()
+            logger.info(f"[유사민원] FTS로 {len(rows)}건 조회")
+        except Exception as e_fts:
+            db.rollback()
+            logger.error(f"[유사민원] FTS 실패 → 최신 3건으로 대체: {e_fts}")
 
-    # 6. 안전한 JSON 파싱
+            # ---------- (C) 최종 폴백: 최신 3건 ----------
+            try:
+                sql_recent = text("""
+                    SELECT title, summary, reply_content
+                    FROM complaint_history
+                    WHERE summary IS NOT NULL
+                      AND reply_content IS NOT NULL
+                    ORDER BY id DESC
+                    LIMIT 3
+                """)
+                rows = db.execute(sql_recent).fetchall()
+                logger.info(f"[유사민원] 최신 3건으로 {len(rows)}건 조회")
+            except Exception as e_recent:
+                db.rollback()
+                logger.exception("[유사민원] 최신 3건 조회까지 실패 → 빈 배열 반환")
+                return []
+
+    # 4) 새로 찾은 결과 저장 (JSON 안전 처리)
+    def _ensure_json(value):
+        if isinstance(value, (dict, list)):
+            return json.dumps(value, ensure_ascii=False)
+        try:
+            json.loads(value)  # 이미 JSON 문자열이면 통과
+            return value
+        except Exception:
+            return json.dumps({"raw": str(value)}, ensure_ascii=False)
+
+    try:
+        for r in rows:
+            db.add(SimilarHistory(
+                complaint_id=id,
+                title=r.title,
+                summary=r.summary,
+                content=_ensure_json(r.reply_content)
+            ))
+        db.commit()
+    except Exception as e_save:
+        db.rollback()
+        logger.warning(f"[유사민원] 결과 저장 실패(무시): {e_save}")
+
+    # 5) 응답 구성 (JSON 안전 파싱)
     def safe_json(value):
+        if isinstance(value, (dict, list)):
+            return value
         try:
             return json.loads(value)
-        except:
-            return value
+        except Exception:
+            return {"raw": str(value)}
 
-    # 7. 결과 반환
     return [
         {
-            "title": row.title,
-            "summary": row.summary,
-            "content": safe_json(row.reply_content)
+            "title": r.title,
+            "summary": r.summary,
+            "content": safe_json(r.reply_content)
         }
-        for row in rows
+        for r in rows
     ]
 
 @router.get("/admin/public-histories", response_model=List[ReplyBase])

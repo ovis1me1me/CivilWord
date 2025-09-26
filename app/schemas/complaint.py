@@ -74,6 +74,15 @@ class ComplaintReplySummaryResponse(BaseModel):
     class Config:
         orm_mode = True
 
+# 민원 요약 응답용
+class ComplaintSummaryResponse(BaseModel):
+    title: str
+    content: str
+    summary: Any
+    long_summary: Any
+    class Config:
+        orm_mode = True
+
 class ReplyStatusUpdateRequest(BaseModel):
     status: str  # '답변전', '수정중', '답변완료' 중 하나여야 함
 
