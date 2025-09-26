@@ -13,7 +13,7 @@
 3. ComplaintListResponse
     - 민원 목록 조회 시, 전체 개수(total)와 민원 리스트(complaints)를 반환
 
-4. ComplaintSummaryResponse
+4. ComplaintReplySummaryResponse
     - 민원 내용 요약 결과 반환
     - 기존 content와 함께 summary 포함
 
@@ -65,8 +65,8 @@ class ComplaintListResponse(BaseModel):
     total: int
     complaints: List[ComplaintResponse]
 
-# 민원 요약 응답용
-class ComplaintSummaryResponse(BaseModel):
+# 답변 요약 응답용
+class ComplaintReplySummaryResponse(BaseModel):
     title: str
     content: str
     summary: Any

@@ -11,7 +11,7 @@ from app.models.user import User
 from app.models import UserInfo 
 from app.database import SessionLocal
 from typing import List, Optional
-from app.schemas.complaint import ComplaintSummaryResponse, ReplyStatusUpdateRequest
+from app.schemas.complaint import ComplaintReplySummaryResponse, ReplyStatusUpdateRequest
 from app.schemas.response_message import ResponseMessage
 from app.auth import get_current_user
 from datetime import datetime
@@ -45,6 +45,39 @@ def get_db():
     finally:
         db.close()
 
+# 단일 민원 생성 라우터
+@router.post("/complaints")
+def create_complaint(
+    payload: ComplaintCreate = Body(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # 기본 검증
+    title = (payload.title or "").strip()
+    content = (payload.content or "").strip()
+    if not title or not content:
+        raise HTTPException(status_code=400, detail="title과 content는 비어 있을 수 없습니다.")
+
+    is_public = bool(payload.is_public) if payload.is_public is not None else False
+
+    # DB 저장
+    complaint = Complaint(
+        user_uid=current_user.user_uid,
+        title=title,
+        content=content,
+        is_public=is_public,
+        created_at=datetime.utcnow(),
+        reply_summary={},  # 단일 입력 모드는 초기값 비움
+    )
+    db.add(complaint)  
+    db.commit()
+    db.refresh(complaint)
+
+    return {
+        "id": complaint.id,
+        "message": "민원이 생성되었습니다."
+    }
+    
 
 #1. 엑셀 업로드 라우터 (동적 URL보다 먼저 등록)
 # [complaint]에 민원요약, 답변요약 비우고 저장
@@ -448,7 +481,7 @@ def get_all_replies(
 
 # 9. 민원 요약(LLM) 라우터(없으면 생성 후 반환)
 #[complaint]의 content를 input하여  LLM모델로 summary 생성
-@router.get("/complaints/{id}/summary", response_model=ComplaintSummaryResponse)
+@router.get("/complaints/{id}/summary", response_model=ComplaintReplySummaryResponse)
 def get_complaint_summary(
     id: int,
     db: Session = Depends(get_db),
@@ -471,7 +504,7 @@ def get_complaint_summary(
     else:
         complaint_summary = complaint.summary
 
-    return ComplaintSummaryResponse(
+    return ComplaintReplySummaryResponse(
         title=complaint.title,
         content=complaint.content,
         summary=complaint_summary
@@ -480,7 +513,7 @@ def get_complaint_summary(
 
 # 10. 답변 요약 호출 라우터 
 # [complaint] id 기준으로 답변 요약, 제목, 민원 반환
-@router.get("/complaints/{id}/reply-summary", response_model=ComplaintSummaryResponse)
+@router.get("/complaints/{id}/reply-summary", response_model=ComplaintReplySummaryResponse)
 def get_reply_summary(
     id: int,
     db: Session = Depends(get_db),
@@ -497,7 +530,7 @@ def get_reply_summary(
     if not complaint.reply_summary:
         raise HTTPException(status_code=404, detail="요약이 아직 저장되지 않았습니다.")
 
-    return ComplaintSummaryResponse(
+    return ComplaintReplySummaryResponse(
         title=complaint.title,
         content=complaint.content,
         summary=complaint.reply_summary
