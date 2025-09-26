@@ -85,6 +85,8 @@ class ComplaintSummaryResponse(BaseModel):
 
 class ReplyStatusUpdateRequest(BaseModel):
     status: str  # '답변전', '수정중', '답변완료' 중 하나여야 함
+    rating: Optional[int] = None   # 답변완료일 때만 사용
+
 
 class FullReplySummaryResponse(BaseModel):
     summary: Any  # ✅ 구조가 JSON이라면 수정

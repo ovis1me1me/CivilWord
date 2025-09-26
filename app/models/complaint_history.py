@@ -35,4 +35,5 @@ class ComplaintHistory(Base):
 
     moved_at = Column(DateTime, default=datetime.utcnow) 
 
-#유사민원 라우터에서 같이 반환 민원요지, 답변
+    # rating: 1,2,3만 허용
+    rating = Column(Integer, nullable=True)

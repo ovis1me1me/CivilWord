@@ -26,6 +26,7 @@ from sqlalchemy.orm import Session
 from app.schemas.complaint import ReplySummaryRequest
 from app.models.complaint_history import ComplaintHistory
 from fastapi import Body
+from pydantic import BaseModel
 
 from app.models.similar_history import SimilarHistory
 import json
@@ -769,6 +770,7 @@ def update_reply_status(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    # 1) 본인 민원 확인
     complaint = db.query(Complaint).filter(
         Complaint.id == id,
         Complaint.user_uid == current_user.user_uid
@@ -776,12 +778,67 @@ def update_reply_status(
     if not complaint:
         raise HTTPException(status_code=404, detail="해당 민원이 없거나 권한이 없습니다.")
 
+    # 2) 상태 유효성 검증
     allowed_status = {"답변전", "수정중", "답변완료"}
     if data.status not in allowed_status:
         raise HTTPException(status_code=400, detail=f"상태는 {allowed_status} 중 하나여야 합니다.")
 
+    # 3) 상태 변경
     complaint.reply_status = data.status
     db.commit()
     db.refresh(complaint)
 
+    # 4) 답변완료 시 별점 입력 로직
+    if data.status == "답변완료":
+        latest_reply = (
+            db.query(Reply)
+            .filter(Reply.complaint_id == id)
+            .order_by(Reply.created_at.desc())
+            .first()
+        )
+        if not latest_reply:
+            raise HTTPException(status_code=404, detail="해당 민원의 답변을 찾을 수 없습니다.")
+
+        # ★ 별점 값 확인 (요청 데이터에 rating이 포함돼야 함)
+        if data.rating not in {1, 2, 3}:
+            raise HTTPException(status_code=400, detail="별점은 1, 2, 3 중 하나여야 합니다.")
+
+        latest_reply.rating = data.rating
+        db.commit()
+        db.refresh(latest_reply)
+
+        return ResponseMessage(
+            message=f"답변 상태가 '답변완료'로 변경되었으며, 별점 {data.rating}점이 등록되었습니다."
+        )
+
     return ResponseMessage(message=f"답변 상태가 '{data.status}'(으)로 변경되었습니다.")
+
+class RatingResponse(BaseModel):
+    complaint_id: int
+    reply_id: int
+    rating: Optional[int] = None  # 아직 미평가면 null
+    class Config:
+        orm_mode = True
+
+
+#별점 디버깅용 (답변아이디로 조회)
+@router.get("/replies/{reply_id}/rating", response_model=RatingResponse)
+def get_reply_rating_by_reply_id(
+    reply_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    reply = (
+        db.query(Reply)
+        .join(Complaint, Reply.complaint_id == Complaint.id)
+        .filter(Reply.id == reply_id, Complaint.user_uid == current_user.user_uid)
+        .first()
+    )
+    if not reply:
+        raise HTTPException(status_code=404, detail="해당 답변을 찾을 수 없거나 권한이 없습니다.")
+
+    return RatingResponse(
+        complaint_id=reply.complaint_id,
+        reply_id=reply.id,
+        rating=reply.rating
+    )

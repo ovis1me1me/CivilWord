@@ -32,3 +32,6 @@ class Reply(Base):
 
     complaint = relationship("Complaint", back_populates="replies")  # Complaint 모델과의 관계 설정
     history = relationship("UserReplyHistory", back_populates="reply", cascade="all, delete-orphan")
+
+    # rating: 1,2,3만 허용
+    rating = Column(Integer, nullable=True)
