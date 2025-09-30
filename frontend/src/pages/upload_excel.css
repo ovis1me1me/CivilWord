@@ -57,6 +57,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+  cursor: pointer;
 }
 
 .upload-label {
@@ -137,3 +138,83 @@
     width: 100%;
   }
 }
+
+/* 폰트 상속 이슈 해결 */
+input, textarea, select, button {
+  font-family: inherit;
+}
+
+/* 설명 리스트 */
+.intro-list {
+  margin: 0 0 12px 0;
+  padding-left: 1.2rem;
+  color: #444;
+  line-height: 1.6;
+}
+
+/* 탭 */
+.mode-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 16px 0 20px;
+}
+.tab-btn {
+  padding: 8px 14px;
+  border: 1px solid #e5e7eb;
+  background: #fafafa;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.tab-btn.active {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+}
+
+/* 싱글 입력 폼 */
+.single-form {
+  background: #f8f8f8;
+  border-radius: 8px;
+  padding: 20px;
+}
+.field { margin-bottom: 16px; }
+.label { display: block; font-weight: 600; margin-bottom: 8px; color: #333; }
+
+/* 제목 라벨 행 (라벨 왼쪽, 공개 체크박스 오른쪽) */
+.label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.public-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+  font-weight: 500;
+  color: #333;
+}
+
+/* 입력창 100% 유지 */
+.input, .textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  outline: none;
+}
+.input:focus, .textarea:focus {
+  border-color: #111;
+}
+
+/* 드롭존 강조 스타일(기존 유지 + 보강) */
+.upload-box {
+  border: 1.5px #d1d5db;
+}
+.upload-box.dragging {
+  border-color: #111;
+  background-color: #f3f4f6;
+}
+

@@ -11,7 +11,7 @@ from app.models.user import User
 from app.models import UserInfo 
 from app.database import SessionLocal
 from typing import List, Optional
-from app.schemas.complaint import ComplaintSummaryResponse, ReplyStatusUpdateRequest
+from app.schemas.complaint import ComplaintReplySummaryResponse,ComplaintSummaryResponse, ReplyStatusUpdateRequest
 from app.schemas.response_message import ResponseMessage
 from app.auth import get_current_user
 from datetime import datetime
@@ -26,6 +26,7 @@ from sqlalchemy.orm import Session
 from app.schemas.complaint import ReplySummaryRequest
 from app.models.complaint_history import ComplaintHistory
 from fastapi import Body
+from pydantic import BaseModel
 
 from app.models.similar_history import SimilarHistory
 import json
@@ -45,6 +46,39 @@ def get_db():
     finally:
         db.close()
 
+# 단일 민원 생성 라우터
+@router.post("/complaints")
+def create_complaint(
+    payload: ComplaintCreate = Body(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # 기본 검증
+    title = (payload.title or "").strip()
+    content = (payload.content or "").strip()
+    if not title or not content:
+        raise HTTPException(status_code=400, detail="title과 content는 비어 있을 수 없습니다.")
+
+    is_public = bool(payload.is_public) if payload.is_public is not None else False
+
+    # DB 저장
+    complaint = Complaint(
+        user_uid=current_user.user_uid,
+        title=title,
+        content=content,
+        is_public=is_public,
+        created_at=datetime.utcnow(),
+        reply_summary={},  # 단일 입력 모드는 초기값 비움
+    )
+    db.add(complaint)  
+    db.commit()
+    db.refresh(complaint)
+
+    return {
+        "id": complaint.id,
+        "message": "민원이 생성되었습니다."
+    }
+    
 
 #1. 엑셀 업로드 라우터 (동적 URL보다 먼저 등록)
 # [complaint]에 민원요약, 답변요약 비우고 저장
@@ -471,16 +505,26 @@ def get_complaint_summary(
     else:
         complaint_summary = complaint.summary
 
+    # 긴 요약이 없을 때만 생성
+    if not complaint.long_summary:
+        complaint_long_summary = summarize_with_blossom(complaint.content)
+        complaint.long_summary = complaint_long_summary
+        db.commit()
+        db.refresh(complaint)
+    else:
+        complaint_long_summary = complaint.long_summary
+
     return ComplaintSummaryResponse(
         title=complaint.title,
         content=complaint.content,
-        summary=complaint_summary
+        summary=complaint_summary,
+        long_summary=complaint_long_summary
     )
 
 
 # 10. 답변 요약 호출 라우터 
 # [complaint] id 기준으로 답변 요약, 제목, 민원 반환
-@router.get("/complaints/{id}/reply-summary", response_model=ComplaintSummaryResponse)
+@router.get("/complaints/{id}/reply-summary", response_model=ComplaintReplySummaryResponse)
 def get_reply_summary(
     id: int,
     db: Session = Depends(get_db),
@@ -497,7 +541,7 @@ def get_reply_summary(
     if not complaint.reply_summary:
         raise HTTPException(status_code=404, detail="요약이 아직 저장되지 않았습니다.")
 
-    return ComplaintSummaryResponse(
+    return ComplaintReplySummaryResponse(
         title=complaint.title,
         content=complaint.content,
         summary=complaint.reply_summary
@@ -570,7 +614,7 @@ def get_similar_histories(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # 1. 본인 민원인지 확인
+    # 1) 본인 민원 확인
     complaint = db.query(Complaint).filter(
         Complaint.id == id,
         Complaint.user_uid == current_user.user_uid
@@ -578,65 +622,127 @@ def get_similar_histories(
     if not complaint:
         raise HTTPException(status_code=404, detail="해당 민원이 없거나 권한이 없습니다.")
 
-    # 2. 기존에 저장된 유사민원 있으면 그것 반환
+    # 2) 기존 저장된 결과 있으면 반환
     existing = db.query(SimilarHistory).filter(SimilarHistory.complaint_id == id).all()
     if existing:
         logger.info(f"[유사민원] complaint_id={id} → 저장된 {len(existing)}건 반환")
-        return [
-            {
-                "title": item.title,
-                "summary": item.summary,
-                "content": json.loads(item.content)
-            }
-            for item in existing
-        ]
+        def _safe_load(s):
+            try:
+                return json.loads(s) if isinstance(s, str) else s
+            except:
+                return {"raw": s}
+        return [{"title": x.title, "summary": x.summary, "content": _safe_load(x.content)} for x in existing]
 
-    # 3. summary 없으면 빈 배열 반환
+    # 3) 요약 없으면 빈 배열
     if not complaint.summary:
         logger.warning(f"[유사민원] complaint_id={id} → summary 없음 → 빈 배열 반환")
         return []
 
-    # 4. 유사도 기반 쿼리 (pg_trgm + 명시적 CAST)
+    rows = []
+    summary_txt = complaint.summary
+
+    # ---------- (A) pg_trgm 사용 시도 ----------
     try:
-        sql = text("""
+        # superuser 아니면 실패 가능 → 무시
+        try:
+            db.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm"))
+            db.commit()
+        except Exception as ext_e:
+            db.rollback()
+            logger.warning(f"[유사민원] pg_trgm 활성화 실패(무시): {ext_e}")
+
+        sql_trgm = text("""
             SELECT title, summary, reply_content
             FROM complaint_history
             WHERE summary IS NOT NULL
-            AND reply_content IS NOT NULL
-            ORDER BY similarity((title || ' ' || summary), CAST(:input_summary AS text)) DESC
+              AND reply_content IS NOT NULL
+            ORDER BY similarity(
+                COALESCE(title,'') || ' ' || COALESCE(summary,''),
+                CAST(:input_summary AS text)
+            ) DESC
             LIMIT 3
         """)
-        rows = db.execute(sql, {"input_summary": complaint.summary}).fetchall()
-    except Exception as e:
+        rows = db.execute(sql_trgm, {"input_summary": summary_txt}).fetchall()
+        logger.info(f"[유사민원] pg_trgm(similarity)로 {len(rows)}건 조회")
+    except Exception as e_trgm:
         db.rollback()
-        logger.exception("[유사민원] SQL 실행 에러")
-        raise HTTPException(status_code=500, detail=f"유사 민원 쿼리 실패: {str(e)}")
+        logger.warning(f"[유사민원] similarity 실패 → FTS로 대체: {e_trgm}")
 
-    # 5. 새로 찾은 결과 저장
-    for row in rows:
-        db.add(SimilarHistory(
-            complaint_id=id,
-            title=row.title,
-            summary=row.summary,
-            content=json.dumps(row.reply_content)
-        ))
-    db.commit()
+        # ---------- (B) Full-Text Search 폴백 ----------
+        try:
+            sql_fts = text("""
+                SELECT title, summary, reply_content
+                FROM complaint_history
+                WHERE summary IS NOT NULL
+                  AND reply_content IS NOT NULL
+                ORDER BY ts_rank_cd(
+                    to_tsvector('simple', COALESCE(title,'') || ' ' || COALESCE(summary,'')),
+                    plainto_tsquery('simple', CAST(:input_summary AS text))
+                ) DESC
+                LIMIT 3
+            """)
+            rows = db.execute(sql_fts, {"input_summary": summary_txt}).fetchall()
+            logger.info(f"[유사민원] FTS로 {len(rows)}건 조회")
+        except Exception as e_fts:
+            db.rollback()
+            logger.error(f"[유사민원] FTS 실패 → 최신 3건으로 대체: {e_fts}")
 
-    # 6. 안전한 JSON 파싱
+            # ---------- (C) 최종 폴백: 최신 3건 ----------
+            try:
+                sql_recent = text("""
+                    SELECT title, summary, reply_content
+                    FROM complaint_history
+                    WHERE summary IS NOT NULL
+                      AND reply_content IS NOT NULL
+                    ORDER BY id DESC
+                    LIMIT 3
+                """)
+                rows = db.execute(sql_recent).fetchall()
+                logger.info(f"[유사민원] 최신 3건으로 {len(rows)}건 조회")
+            except Exception as e_recent:
+                db.rollback()
+                logger.exception("[유사민원] 최신 3건 조회까지 실패 → 빈 배열 반환")
+                return []
+
+    # 4) 새로 찾은 결과 저장 (JSON 안전 처리)
+    def _ensure_json(value):
+        if isinstance(value, (dict, list)):
+            return json.dumps(value, ensure_ascii=False)
+        try:
+            json.loads(value)  # 이미 JSON 문자열이면 통과
+            return value
+        except Exception:
+            return json.dumps({"raw": str(value)}, ensure_ascii=False)
+
+    try:
+        for r in rows:
+            db.add(SimilarHistory(
+                complaint_id=id,
+                title=r.title,
+                summary=r.summary,
+                content=_ensure_json(r.reply_content)
+            ))
+        db.commit()
+    except Exception as e_save:
+        db.rollback()
+        logger.warning(f"[유사민원] 결과 저장 실패(무시): {e_save}")
+
+    # 5) 응답 구성 (JSON 안전 파싱)
     def safe_json(value):
+        if isinstance(value, (dict, list)):
+            return value
         try:
             return json.loads(value)
-        except:
-            return value
+        except Exception:
+            return {"raw": str(value)}
 
-    # 7. 결과 반환
     return [
         {
-            "title": row.title,
-            "summary": row.summary,
-            "content": safe_json(row.reply_content)
+            "title": r.title,
+            "summary": r.summary,
+            "content": safe_json(r.reply_content)
         }
-        for row in rows
+        for r in rows
     ]
 
 @router.get("/admin/public-histories", response_model=List[ReplyBase])
@@ -664,6 +770,7 @@ def update_reply_status(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    # 1) 본인 민원 확인
     complaint = db.query(Complaint).filter(
         Complaint.id == id,
         Complaint.user_uid == current_user.user_uid
@@ -671,12 +778,67 @@ def update_reply_status(
     if not complaint:
         raise HTTPException(status_code=404, detail="해당 민원이 없거나 권한이 없습니다.")
 
+    # 2) 상태 유효성 검증
     allowed_status = {"답변전", "수정중", "답변완료"}
     if data.status not in allowed_status:
         raise HTTPException(status_code=400, detail=f"상태는 {allowed_status} 중 하나여야 합니다.")
 
+    # 3) 상태 변경
     complaint.reply_status = data.status
     db.commit()
     db.refresh(complaint)
 
+    # 4) 답변완료 시 별점 입력 로직
+    if data.status == "답변완료":
+        latest_reply = (
+            db.query(Reply)
+            .filter(Reply.complaint_id == id)
+            .order_by(Reply.created_at.desc())
+            .first()
+        )
+        if not latest_reply:
+            raise HTTPException(status_code=404, detail="해당 민원의 답변을 찾을 수 없습니다.")
+
+        # ★ 별점 값 확인 (요청 데이터에 rating이 포함돼야 함)
+        if data.rating not in {1, 2, 3}:
+            raise HTTPException(status_code=400, detail="별점은 1, 2, 3 중 하나여야 합니다.")
+
+        latest_reply.rating = data.rating
+        db.commit()
+        db.refresh(latest_reply)
+
+        return ResponseMessage(
+            message=f"답변 상태가 '답변완료'로 변경되었으며, 별점 {data.rating}점이 등록되었습니다."
+        )
+
     return ResponseMessage(message=f"답변 상태가 '{data.status}'(으)로 변경되었습니다.")
+
+class RatingResponse(BaseModel):
+    complaint_id: int
+    reply_id: int
+    rating: Optional[int] = None  # 아직 미평가면 null
+    class Config:
+        orm_mode = True
+
+
+#별점 디버깅용 (답변아이디로 조회)
+@router.get("/replies/{reply_id}/rating", response_model=RatingResponse)
+def get_reply_rating_by_reply_id(
+    reply_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    reply = (
+        db.query(Reply)
+        .join(Complaint, Reply.complaint_id == Complaint.id)
+        .filter(Reply.id == reply_id, Complaint.user_uid == current_user.user_uid)
+        .first()
+    )
+    if not reply:
+        raise HTTPException(status_code=404, detail="해당 답변을 찾을 수 없거나 권한이 없습니다.")
+
+    return RatingResponse(
+        complaint_id=reply.complaint_id,
+        reply_id=reply.id,
+        rating=reply.rating
+    )

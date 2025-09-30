@@ -35,6 +35,13 @@ export default function ComplaintDetailPage() {
     { summaryTitle: '', answerOptions: [''] },
   ]);
 
+  // ✅ 긴 요약이 없을 때 임시로 만들어주는 헬퍼
+  const makeLongSummary = (short: string) => {
+    if (!short) return '';
+    // 임시(하드코딩) 정책: 짧은 요약을 한 번 더 붙여서 길게 보이도록
+    return `${short}\n\n[상세요약(임시)]: ${short}`;
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       if (!id) return;
@@ -48,26 +55,33 @@ export default function ComplaintDetailPage() {
         ]);
 
         const complaintData = complaintRes.data;
-        const summary = summaryRes.data.summary || '';
+
+        // 백엔드에서 내려주는 요약들
+        const shortSummary: string = summaryRes?.data?.summary || '';        // 짧은 요약 (답변요지의 summaryTitle에 사용)
+        const longSummaryApi: string | undefined = summaryRes?.data?.long_summary; // 긴 요약 (있으면 사용)
+        const longSummary: string = longSummaryApi ?? makeLongSummary(shortSummary);
+
         const replySummary = '';
 
+        // ✅ 화면의 “민원 요지” 박스에는 긴 요약(longSummary)을 표시
         setComplaint({
           id: complaintData.id,
           title: complaintData.title,
           content: complaintData.content,
-          summary: summary,
+          summary: longSummary,       // 화면 노출용 긴 요약
           answerSummary: replySummary,
         });
 
-        // 2️⃣ summary가 있을 때만 유사민원 API 호출
-        if (summary.trim()) {
+        // ✅ 요구 1: 답변요지(AnswerBlock)의 summaryTitle 초기값에 “짧은 요약” 주입
+        setAnswerBlocks([{ summaryTitle: shortSummary, answerOptions: [''] }]);
+
+        // 2️⃣ summary(짧은 요약)가 있을 때만 유사민원 API 호출
+        if (shortSummary.trim()) {
           const similarHistoryRes = await fetchSimilarHistories(numericId);
           setSimilarAnswersList(similarHistoryRes);
         } else {
           setSimilarAnswersList([]); // 없을 경우 빈 배열
         }
-
-        setAnswerBlocks([{ summaryTitle: replySummary, answerOptions: ['', '', ''] }]);
       } catch (err) {
         console.error('데이터 조회 실패:', err);
       } finally {
@@ -84,7 +98,7 @@ export default function ComplaintDetailPage() {
     }
   }, [answerBlocks]);
 
-  // 민원 요약 입력
+  // 민원 요약 입력 (AnswerBlock의 summaryTitle)
   const handleSummaryChange = (index: number, value: string) => {
     setAnswerBlocks(prev =>
       prev.map((block, i) =>
@@ -97,7 +111,7 @@ export default function ComplaintDetailPage() {
   const handleAddSummary = () => {
     setAnswerBlocks(prev => [
       ...prev,
-      { summaryTitle: '', answerOptions: ['','',''] },
+      { summaryTitle: '', answerOptions: [''] },
     ]);
   };
 
@@ -115,20 +129,17 @@ export default function ComplaintDetailPage() {
   // 답변 요지 삭제
   const handleDeleteAnswerOption = (summaryIndex: number, answerIndex: number) => {
     setAnswerBlocks(prev => {
-      // 옵션 삭제
       const newBlocks = prev.map((block, i) => {
         if (i !== summaryIndex) return block;
         const updatedOptions = block.answerOptions.filter((_, idx) => idx !== answerIndex);
         return { ...block, answerOptions: updatedOptions };
       });
 
-      // 삭제되기 전 조건 확인
       const filteredBlocks = newBlocks.filter(
         (block) =>
           !(block.answerOptions.length === 0 && block.summaryTitle.trim() === '')
       );
 
-      // 최소 1개는 유지
       return filteredBlocks.length === 0 ? [{ summaryTitle: '', answerOptions: [''] }] : filteredBlocks;
     });
   };
@@ -171,10 +182,8 @@ export default function ComplaintDetailPage() {
     try {
       const numericId = parseInt(id, 10);
 
-      // Define the labels array here
-      const labels = ['가', '나', '다', '라', '마', '바', '사', '아', '자', '차', '카', '타', '파', '하'];
+      const labels = ['•'];
 
-      // Construct the payload
       const payload = {
         answer_summary: answerBlocks
           .map((block) => {
@@ -187,23 +196,21 @@ export default function ComplaintDetailPage() {
             }
 
             return {
-              index: block.summaryTitle, // 'review'를 'index'로 변경
-              section: filledOptions.map((opt, index) => ({ // 'sections'를 'section'으로 변경
+              index: block.summaryTitle,
+              section: filledOptions.map((opt, index) => ({
                 title: labels[index] || '',
                 text: opt,
               })),
             };
           })
           .filter(
-            (item): item is { index: string; section: { title: string; text: string }[] } => item !== null // 타입 단언도 수정
+            (item): item is { index: string; section: { title: string; text: string }[] } => item !== null
           ),
       };
 
       console.log('보내는 payload:', JSON.stringify(payload, null, 2));
-      // 답변 요지 저장
       await saveReplySummary(numericId, payload);
 
-      // 2) 답변 1회 생성 API 호출 (JWT 인증 필요)
       const replyResponse = await generateReply(numericId, payload);
       console.log('생성된 답변:', replyResponse.data);
 
@@ -218,6 +225,27 @@ export default function ComplaintDetailPage() {
     }
   };
 
+  // ✅ 유사 민원에서 '답변 선택' 눌렀을 때 반영
+  const handleSelectFromSimilar = (payload: { summaryTitle: string; answerOptions: string[] }) => {
+    const { summaryTitle, answerOptions } = payload;
+
+    const safeOptions = (answerOptions?.length ? answerOptions : ['']).slice(0);
+
+    setAnswerBlocks(prev => {
+      const next = [...prev];
+      if (next.length === 0) {
+        return [{ summaryTitle, answerOptions: safeOptions }];
+      }
+      next[0] = { summaryTitle, answerOptions: safeOptions };
+      return next;
+    });
+
+    requestAnimationFrame(() => {
+      const el = document.querySelector('[data-answer-container="true"]');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
+
   if (isLoading || !complaint) {
     return <Spinner />;
   }
@@ -227,22 +255,23 @@ export default function ComplaintDetailPage() {
       <div className="p-4 max-w-[1000px] mx-auto space-y-6 relative">
         <Header title={complaint.title} />
         <ContentBox label="민원 내용" content={complaint.content} />
+        {/* ✅ 화면에는 긴 요약을 노출 */}
         <ContentBox label="민원 요지" content={complaint.summary} />
 
         <div className="grid md:grid-cols-2 gap-6 max-w-[1000px] mx-auto">
-          {/* similarAnswersList를 그대로 전달합니다. */}
           <SimilarAnswersBlock
             index={0}
-            similarAnswers={similarAnswersList} 
+            similarAnswers={similarAnswersList}
             containerHeight={answerHeight}
+            onSelect={handleSelectFromSimilar}
           />
 
-          <div ref={answerContainerRef} className="flex flex-col gap-6">
+          <div ref={answerContainerRef} className="flex flex-col gap-6" data-answer-container="true">
             {answerBlocks.map((block, index) => (
               <AnswerBlock
                 key={index}
                 index={index}
-                summaryTitle={block.summaryTitle}
+                summaryTitle={block.summaryTitle}          // ✅ 짧은 요약이 들어감
                 answerOptions={block.answerOptions}
                 onSummaryChange={(value) => handleSummaryChange(index, value)}
                 onAddAnswer={() => handleAddAnswerOption(index)}

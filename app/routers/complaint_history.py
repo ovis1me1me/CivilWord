@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from typing import List
-
+from typing import Optional
+from pydantic import BaseModel
 from app.database import get_db
 from app.models.complaint import Complaint
 from app.models.complaint_history import ComplaintHistory
@@ -118,6 +119,7 @@ def move_complaints_to_history(
     for complaint in complaints:
         reply = db.query(Reply).filter(Reply.complaint_id == complaint.id).first()
         reply_content = reply.content if reply else None
+        reply_rating = reply.rating if reply else None
 
         history = ComplaintHistory(
             user_uid=complaint.user_uid,
@@ -127,7 +129,8 @@ def move_complaints_to_history(
             is_public=complaint.is_public,
             created_at=complaint.created_at,
             reply_summary=complaint.reply_summary,
-            reply_content=reply_content
+            reply_content=reply_content,
+            rating=reply_rating
         )
         db.add(history)
 
@@ -150,3 +153,29 @@ def get_all_complaint_histories_for_test(
         .order_by(ComplaintHistory.created_at.desc())\
         .limit(100).all()
     return histories
+
+# 7. 테스트용 히소토리 아이디로 별점 조회
+class HistoryRatingResponse(BaseModel):
+    history_id: int
+    rating: Optional[int] = None  # 미평가면 null
+    class Config:
+        orm_mode = True
+
+@router.get("/complaint-histories/{history_id}/rating", response_model=HistoryRatingResponse)
+def get_history_rating(
+    history_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    hist = (
+        db.query(ComplaintHistory)
+        .filter(
+            ComplaintHistory.id == history_id,
+            ComplaintHistory.user_uid == current_user.user_uid,  # 소유권 확인
+        )
+        .first()
+    )
+    if not hist:
+        raise HTTPException(status_code=404, detail="해당 히스토리를 찾을 수 없거나 권한이 없습니다.")
+
+    return HistoryRatingResponse(history_id=hist.id, rating=hist.rating)

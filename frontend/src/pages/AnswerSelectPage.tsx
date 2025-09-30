@@ -20,6 +20,7 @@ import { FullAnswer, createNewBlock, ContentBlock } from '../component/AnswerSel
 import AnswerSelectActions from '../component/AnswerSelect/AnswerSelectActions';
 import Spinner from '../component/Shared/Spinner';
 import SimilarAnswersBlock from '../component/AnswerSelect/SimilarAnswersBlock';
+import QualityRatingModal from '../component/AnswerSelect/QualityRatingModal';
 
 interface AnswerSection {
   title: string;
@@ -31,17 +32,14 @@ interface AnswerSummaryBlock {
   section: AnswerSection[];
 }
 
-// ✅ 수정된: stripIdsFromAnswer
 const stripIdsFromAnswer = (answer: FullAnswer) => {
-  const sectionLabel = ['가', '나', '다', '라', '마', '바', '사', '아', '자', '차', '카', '타', '파', '하'];
-
   return {
     header: answer.header,
     summary: answer.summary,
     body: answer.body.map((block, blockIdx) => ({
       index: block.title,
       section: block.sections.map((sec, secIdx) => ({
-        title: sectionLabel[secIdx] || `•`,
+        title: '•',
         text: sec.text
       }))
     })),
@@ -70,8 +68,9 @@ export default function AnswerSelectPage() {
   const [selectedAnswer, setSelectedAnswer] = useState<FullAnswer | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false); // ✅ 추가
 
-  const convertBackendReplyToFullAnswer = (backendReply: any, complaintSummaryText: string): FullAnswer => {
+  const convertBackendReplyToFullAnswer = (backendReply: any): FullAnswer => {
     const content = backendReply?.content;
     if (typeof content !== 'object' || content === null) {
       return {
@@ -85,8 +84,7 @@ export default function AnswerSelectPage() {
     const greeting = content.header || '인사말이 없습니다.';
     const body = content.body || [];
     const closing = content.footer || '끝맺음말이 없습니다.';
-    // ✅ 수정된 부분: 백엔드에서 보낸 content.summary를 사용합니다.
-    const replySummaryFromBackend = content.summary || '요약 없음'; 
+    const replySummaryFromBackend = content.summary || '요약 없음';
 
     let contentBlocks: ContentBlock[] = [];
     try {
@@ -97,6 +95,7 @@ export default function AnswerSelectPage() {
           title: block.index || '',
           sections: (block.section || []).map((sec: any) => ({
             id: uuidv4(),
+            title: '•',
             text: sec.text || ''
           }))
         }));
@@ -108,13 +107,12 @@ export default function AnswerSelectPage() {
 
     return {
       header: greeting,
-      summary: replySummaryFromBackend, // 👈 이제 백엔드에서 재조립된 summary가 들어갑니다.
+      summary: replySummaryFromBackend,
       body: contentBlocks,
       footer: closing
     };
   };
 
-  // similarAnswersList의 타입을 백엔드 반환 형식에 맞게 수정합니다.
   const [similarAnswersList, setSimilarAnswersList] = useState<
     { title: string; summary: string; content: string }[]
   >([]);
@@ -128,7 +126,7 @@ export default function AnswerSelectPage() {
         fetchComplaintSummary(Number(id)),
         fetchReplySummary(Number(id)),
         fetchReplies(Number(id)),
-        fetchSimilarHistories(Number(id)), // 유사 민원 이력 호출
+        fetchSimilarHistories(Number(id)),
       ]);
 
       const actualComplaintSummary = complaintSummaryRes.data.summary || '민원 요약 없음';
@@ -146,17 +144,16 @@ export default function AnswerSelectPage() {
 
       const rawAnswers = repliesRes.data || [];
       const processedAnswers = rawAnswers.map(reply =>
-        convertBackendReplyToFullAnswer(reply, actualComplaintSummary)
+        convertBackendReplyToFullAnswer(reply)
       );
       setGeneratedAnswers(processedAnswers);
-      console.log('변환된 FullAnswer 객체들 (processedAnswers):', processedAnswers); // 확인용 로그 유지
+      console.log('변환된 FullAnswer 객체들 (processedAnswers):', processedAnswers);
 
       setSelectedAnswer(null);
       setCurrentPage(0);
       setIsEditing(false);
 
-      // 유사 민원 이력 데이터를 상태에 저장합니다.
-      setSimilarAnswersList(similarHistoryRes); 
+      setSimilarAnswersList(similarHistoryRes);
 
     } catch (err) {
       console.error('데이터 불러오기 실패', err);
@@ -193,28 +190,25 @@ export default function AnswerSelectPage() {
   };
 
   const handleAddSection = (blockIndex: number) => {
-    const labels = ['가', '나', '다', '라', '마', '바', '사', '아', '자', '차', '카', '타', '파', '하'];
     setAnswerSummaryBlocks(prev =>
       prev.map((block, i) => {
         if (i !== blockIndex) return block;
-        const nextLabel = labels[block.section.length] || '•';
         return {
           ...block,
-          section: [...block.section, { title: nextLabel, text: '' }]
+          section: [...block.section, { title: '•', text: '' }]
         };
       })
     );
   };
 
   const handleDeleteSection = (blockIndex: number, sectionIndex: number) => {
-    const labels = ['가', '나', '다', '라', '마', '바', '사', '아', '자', '차', '카', '타', '파', '하'];
     setAnswerSummaryBlocks(prev => {
       const targetBlock = prev[blockIndex];
       const updatedSections = targetBlock.section.filter((_, i) => i !== sectionIndex);
       if (updatedSections.length === 0) {
         const newBlocks = prev.filter((_, i) => i !== blockIndex);
         return newBlocks.length === 0
-          ? [{ index: '', section: [{ title: '가', text: '' }] }]
+          ? [{ index: '', section: [{ title: '•', text: '' }] }]
           : newBlocks;
       }
       return prev.map((block, i) => {
@@ -223,7 +217,7 @@ export default function AnswerSelectPage() {
           ...block,
           section: updatedSections.map((s, j) => ({
             ...s,
-            title: labels[j] || '•',
+            title: '•',
           })),
         };
       });
@@ -233,33 +227,27 @@ export default function AnswerSelectPage() {
   const handleAddBlock = () => {
     setAnswerSummaryBlocks(prev => [
       ...prev,
-      { index: '', section: [{ title: '가', text: '' }] }
+      { index: '', section: [{ title: '•', text: '' }] }
     ]);
   };
 
-  const saveAnswer = async (status: '수정중' | '답변완료') => {
-    const confirmMessage = status === REPLY_STATUS.COMPLETED
-      ? '답변을 완료하시겠습니까?'
-      : '답변을 보류하고 목록으로 이동할까요?';
+  // ✅ 수정된: saveAnswer 함수 (rating 인자 추가)
+  const saveAnswer = async (status: '수정중' | '답변완료', rating?: number) => {
+    if (!id || !selectedAnswer) return;
+    try {
+      const answerWithoutIds = stripIdsFromAnswer(selectedAnswer);
 
-    if (window.confirm(confirmMessage)) {
-      if (!id || !selectedAnswer) return;
-      try {
-        const answerWithoutIds = stripIdsFromAnswer(selectedAnswer);
+      console.log('전송될 reply_content:', answerWithoutIds);
 
-        console.log('전송될 reply_content:', answerWithoutIds); // 확인용 로그 유지
+      await Promise.all([
+        updateReplyContent(Number(id), answerWithoutIds),
+        updateReplyStatus(Number(id), status, rating)
+      ]);
 
-        await Promise.all([
-          updateReplyContent(Number(id), answerWithoutIds),
-          //aveReplySummary(Number(id), { answer_summary: answerSummaryBlocks }),
-          updateReplyStatus(Number(id), status)
-        ]);
-
-        navigate('/complaints');
-      } catch (err) {
-        console.error(`답변 ${status} 처리 실패`, err);
-        alert('처리 중 오류가 발생했습니다.');
-      }
+      navigate('/complaints');
+    } catch (err) {
+      console.error(`답변 ${status} 처리 실패`, err);
+      alert('처리 중 오류가 발생했습니다.');
     }
   };
 
@@ -268,8 +256,32 @@ export default function AnswerSelectPage() {
     setIsEditing(false);
   };
 
-  const handleHold = () => saveAnswer(REPLY_STATUS.EDITING);
-  const handleComplete = () => saveAnswer(REPLY_STATUS.COMPLETED);
+  const handleHold = () => {
+    // 수정된: 확인 메시지를 먼저 띄우고 사용자의 응답에 따라 함수 호출
+    const confirmMessage = '답변을 보류하고 목록으로 이동할까요?';
+    if (window.confirm(confirmMessage)) {
+      saveAnswer(REPLY_STATUS.EDITING);
+    }
+  };
+
+  // 수정된: handleComplete 함수
+  const handleComplete = () => {
+    if (window.confirm('답변을 완료하시겠습니까?')) {
+      setShowRatingModal(true);
+    }
+  };
+
+  // ✅ 새로 추가된: handleRatingSubmit 함수
+  const handleRatingSubmit = (rating: number) => {
+    setShowRatingModal(false);
+    saveAnswer(REPLY_STATUS.COMPLETED, rating);
+  };
+
+  // ✅ 새로운 함수: 나중에 평가하기 클릭 시 동작
+  const handleCloseRatingAndNavigate = () => {
+    setShowRatingModal(false);
+    navigate('/complaints');
+  };
 
   const handleRegenerate = async () => {
     if (!id) return;
@@ -309,60 +321,65 @@ export default function AnswerSelectPage() {
         </div>
 
         <div className="flex justify-start">
-          <SegmentedControl selected={selectedSegment} setSelected={setSelectedSegment} />
-        </div>
+          <SegmentedControl selected={selectedSegment} setSelected={setSelectedSegment} />
+        </div>
 
-        <div className="flex relative min-h-[384px]">
-          {selectedSegment === '생성된 답변' && generatedAnswers.length > 0 && (
-            <AnswerBox
-              content={selectedAnswer ?? generatedAnswers[currentPage]}
-              onChange={setSelectedAnswer}
-              isEditing={isEditing}
-              onEdit={() => {
-                setSelectedAnswer(JSON.parse(JSON.stringify(generatedAnswers[currentPage])));
-                setIsEditing(true);
-              }}
-            />
-          )}
-          {selectedSegment === '생성된 답변' && generatedAnswers.length === 0 && !loading && (
-            <div className="flex items-center justify-center w-full p-4 bg-gray-200 rounded-lg">
-              생성된 답변이 없습니다.
-            </div>
-          )}
-          {selectedSegment === '유사 민원 답변' && (
-            <div className="flex-1 p-4 bg-gray-200 rounded-lg"> {/* h-80 클래스를 제거합니다. */}
-              <SimilarAnswersBlock
-                index={0}
-                similarAnswers={similarAnswersList} 
-                // containerHeight={answerHeight} // 이 주석 처리된 부분을 완전히 제거합니다.
-              />
-            </div>
-          )}
-          {isGenerating && (
-            <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-60 rounded">
-              <Spinner />
-            </div>
-          )}
-        </div>
+        <div className="flex relative min-h-[384px]">
+          {selectedSegment === '생성된 답변' && generatedAnswers.length > 0 && (
+            <AnswerBox
+              content={selectedAnswer ?? generatedAnswers[currentPage]}
+              onChange={setSelectedAnswer}
+              isEditing={isEditing}
+              onEdit={() => {
+                setSelectedAnswer(JSON.parse(JSON.stringify(generatedAnswers[currentPage])));
+                setIsEditing(true);
+              }}
+            />
+          )}
+          {selectedSegment === '생성된 답변' && generatedAnswers.length === 0 && !loading && (
+            <div className="flex items-center justify-center w-full p-4 bg-gray-200 rounded-lg">
+              생성된 답변이 없습니다.
+            </div>
+          )}
+          {selectedSegment === '유사 민원 답변' && (
+            <div className="flex-1 p-4 bg-gray-200 rounded-lg">
+              <SimilarAnswersBlock
+                index={0}
+                similarAnswers={similarAnswersList}
+              />
+            </div>
+          )}
+          {isGenerating && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-60 rounded">
+              <Spinner />
+            </div>
+          )}
+        </div>
 
-        {selectedAnswer ? (
-          <AnswerSelectActions onReselect={handleReselect} onHold={handleHold} onComplete={handleComplete} />
-        ) : (
-          generatedAnswers.length > 1 && (
-            <div className="flex justify-center gap-2">
-              {generatedAnswers.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setCurrentPage(i)}
-                  className={`px-2 py-1 rounded text-xs ${currentPage === i ? 'bg-black text-white' : 'bg-gray-200'}`}
-                >
-                  {i + 1}
-                </button>
-              ))}
-            </div>
-          )
-        )}
-      </div>
-  </div>
-  );
+        {selectedAnswer ? (
+          <AnswerSelectActions onReselect={handleReselect} onHold={handleHold} onComplete={handleComplete} />
+        ) : (
+          generatedAnswers.length > 1 && (
+            <div className="flex justify-center gap-2">
+              {generatedAnswers.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setCurrentPage(i)}
+                  className={`px-2 py-1 rounded text-xs ${currentPage === i ? 'bg-black text-white' : 'bg-gray-200'}`}
+                >
+                  {i + 1}
+                </button>
+              ))}
+            </div>
+          )
+        )}
+      </div>
+      {showRatingModal && (
+        <QualityRatingModal
+          onClose={handleCloseRatingAndNavigate}
+          onRatingSubmit={handleRatingSubmit}
+        />
+      )}
+    </div>
+  );
 }

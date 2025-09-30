@@ -38,6 +38,7 @@ class ComplaintHistoryResponse(BaseModel):
     reply_status: str
     reply_content: Optional[Any] 
     moved_at: Optional[datetime] = None
+    rating: Optional[int] = None
 
     class Config:
         orm_mode = True
