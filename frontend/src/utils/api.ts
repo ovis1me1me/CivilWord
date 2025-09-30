@@ -115,8 +115,9 @@ export const fetchSimilarReplies = (id: number) =>
 /** ✅ 13️. 민원 답변 상태 변경 */
 export const updateReplyStatus = (
   id: number,
-  status: '답변전' | '수정중' | '답변완료'
-) => instance.put(`/complaints/${id}/reply-status`, { status });
+  status: '답변전' | '수정중' | '답변완료',
+  rating?: number  // rating 추가
+) => instance.put(`/complaints/${id}/reply-status`, { status, rating });
 
 /** ✅ 14. 선택한 민원을 히스토리로 이동 */
 export const moveToHistory = (ids: number[]) =>
