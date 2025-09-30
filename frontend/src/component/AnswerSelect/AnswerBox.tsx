@@ -25,7 +25,7 @@ const createNewSection = (): Section => ({
 
 const createNewBlock = (): ContentBlock => ({
   id: `block-${Date.now()}`,
-  title: '새로운 검토 항목',
+  title: '블록 제목을 입력하세요.',
   sections: [createNewSection()],
 });
 
@@ -76,9 +76,7 @@ export default function AnswerBox({ content, onChange, isEditing, onEdit }: Prop
     });
   };
 
-  // '가', '나', '다' 와 같은 라벨을 생성하는 함수
-  const getSectionLabel = (index: number) => `${'가나다라마바사아자차카타파하'[index]}.`;
-
+  // ✅ 수정된: handleCopyAnswer 함수
   const handleCopyAnswer = () => {
     const fullText = [
       `1. ${content.header}`,
@@ -86,7 +84,8 @@ export default function AnswerBox({ content, onChange, isEditing, onEdit }: Prop
       ...content.body.map((block, blockIndex) => {
         const blockTitle = `${3 + blockIndex}. ${block.title}`;
         const sections = block.sections
-          .map((section, sectionIndex) => `${getSectionLabel(sectionIndex)} ${section.text}`)
+          // ✅ 수정된: 섹션 라벨을 '•'으로 변경
+          .map(section => `• ${section.text}`)
           .join('\n');
         return `${blockTitle}\n${sections}`;
       }),
@@ -103,7 +102,6 @@ export default function AnswerBox({ content, onChange, isEditing, onEdit }: Prop
     return <div className="p-4 bg-gray-200 rounded-2xl">답변 내용이 없습니다.</div>;
   }
 
-  // 섹션 번호를 관리하기 위한 변수
   let sectionNumber = 1;
 
   return (
@@ -142,6 +140,7 @@ export default function AnswerBox({ content, onChange, isEditing, onEdit }: Prop
           />
         </div>
       </div>
+
       {/* 3. 답변 본문 블록 */}
       {content.body.map((block, blockIndex) => (
         <div key={block.id || blockIndex} className="flex items-start space-x-3">
@@ -169,8 +168,9 @@ export default function AnswerBox({ content, onChange, isEditing, onEdit }: Prop
             <div className="pl-4 space-y-3">
               {block.sections.map((section, sectionIndex) => (
                 <div key={section.id || sectionIndex} className="flex items-start gap-3">
+                  {/* ✅ 수정된: '가' '나' '다' 대신 '•'으로 고정 */}
                   <span className="pt-2 font-semibold text-gray-700 whitespace-nowrap">
-                    {getSectionLabel(sectionIndex)}
+                    •
                   </span>
                   <CustomTextarea
                     value={section.text}
@@ -214,6 +214,7 @@ export default function AnswerBox({ content, onChange, isEditing, onEdit }: Prop
           </div>
         </div>
       )}
+
       {/* 4. 끝맺음 */}
       <div className="flex items-start space-x-3">
         <span className="text-lg font-bold text-gray-800 pt-3">
@@ -228,6 +229,7 @@ export default function AnswerBox({ content, onChange, isEditing, onEdit }: Prop
           />
         </div>
       </div>
+
       {/* 전체 복사 버튼 */}
       {isEditing && (
         <div className="w-full flex justify-end">

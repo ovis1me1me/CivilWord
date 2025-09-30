@@ -150,6 +150,12 @@ export const fetchSimilarHistories = async (id: number) => {
   return response.data;
 };
 
+export const createComplaint = (payload: {
+  title: string;
+  content: string;
+  is_public: boolean;
+}) => instance.post('/complaints', payload);
+
 
 /** ✅ 기본 axios 인스턴스 export */
 export default instance;
