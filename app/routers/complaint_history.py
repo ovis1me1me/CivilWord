@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+from sqlalchemy.sql import expression
 from typing import List
 from typing import Optional
 from pydantic import BaseModel
@@ -13,10 +14,77 @@ from app.schemas.complaint_history import ComplaintHistoryResponse, HistorySimpl
 from app.schemas.reply import SimpleContent
 from app.schemas.response_message import ResponseMessage
 from app.auth import get_current_user
+import pandas as pd
+import io 
+from fastapi.responses import StreamingResponse
+from sqlalchemy import asc, desc
+from sqlalchemy.sql import expression
+try:
+    # SQLAlchemy 2.x
+    from sqlalchemy import nulls_last
+except ImportError:
+    nulls_last = None
 
 router = APIRouter()
 
-# ✅ 1. 검색 (가장 먼저)
+
+# 0. 히스토리 엑셀 다운로드 라우터
+@router.get("/history/download-excel")
+def download_complaint_history_excel(
+    ids: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    id_list = [int(i) for i in ids.split(",") if i.isdigit()]
+
+    if not id_list:
+        raise HTTPException(status_code=400, detail="유효한 히스토리 ID 목록을 전달해주세요.")
+
+    histories = db.query(ComplaintHistory).filter(
+        ComplaintHistory.user_uid == current_user.user_uid,
+        ComplaintHistory.id.in_(id_list)
+    ).all()
+
+    if not histories:
+        raise HTTPException(status_code=404, detail="조회된 히스토리가 없습니다.")
+
+    rows = []
+    for history in histories:
+        # reply_content는 JSONB → 문자열로 정리
+        reply_text = ""
+        if history.reply_content:
+            if isinstance(history.reply_content, dict):
+                reply_text = "\n".join([f"{k}: {v}" for k, v in history.reply_content.items()])
+            else:
+                reply_text = str(history.reply_content)
+        else:
+            reply_text = "(답변 없음)"
+
+        rows.append({
+            "제목": history.title,
+            "내용": history.content,
+            "등록일": history.created_at.strftime("%Y-%m-%d %H:%M:%S") if history.created_at else "",
+            "공개 여부": "공개" if history.is_public else "비공개",
+            "답변": reply_text,
+            "평가": history.rating if history.rating else "",
+        })
+
+    df = pd.DataFrame(rows)
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name='히스토리내역')
+
+    output.seek(0)
+
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=complaint_history.xlsx"}
+    )
+
+
+
+#  1. 검색 (가장 먼저)
 @router.get("/complaints/history/search", response_model=List[ComplaintHistoryResponse])
 def search_complaint_history_by_title(
     keyword: str = Query(..., min_length=1, description="검색할 제목 키워드"),
@@ -33,17 +101,38 @@ def search_complaint_history_by_title(
 
     return histories
 
-# ✅ 2. 히스토리 전체 조회 (정적 URL)
+# 2. 히스토리 전체 조회 (정렬 + 상태 필터)
 @router.get("/complaints/history", response_model=List[ComplaintHistoryResponse])
 def get_complaint_history(
+    sort: str = Query("created_desc"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
-    histories = db.query(ComplaintHistory).filter(
+    q = db.query(ComplaintHistory).filter(
         ComplaintHistory.user_uid == current_user.user_uid
-    ).all()
-    return histories
+    )
 
+    sort = (sort or "created_desc").lower()
+
+    if sort == "created_asc":
+        q = q.order_by(asc(ComplaintHistory.created_at))
+
+    elif sort == "rating_desc":
+        if nulls_last:
+            q = q.order_by(nulls_last(desc(ComplaintHistory.rating)))
+        else:
+            q = q.order_by(ComplaintHistory.rating.is_(None), desc(ComplaintHistory.rating))
+
+    elif sort == "rating_asc":
+        if nulls_last:
+            q = q.order_by(nulls_last(asc(ComplaintHistory.rating)))
+        else:
+            q = q.order_by(ComplaintHistory.rating.is_(None), asc(ComplaintHistory.rating))
+
+    else:  # 기본값: created_desc
+        q = q.order_by(desc(ComplaintHistory.created_at))
+
+    return q.all()
 # ✅ 3. 히스토리 상세 조회 (동적 URL)
 @router.get("/complaints/history/{id}", response_model=HistorySimpleContent)
 def get_complaint_history_by_id(
@@ -179,3 +268,52 @@ def get_history_rating(
         raise HTTPException(status_code=404, detail="해당 히스토리를 찾을 수 없거나 권한이 없습니다.")
 
     return HistoryRatingResponse(history_id=hist.id, rating=hist.rating)
+
+
+# 8. 히스토리 다건 삭제
+@router.delete("/complaints/history", response_model=ResponseMessage)
+def delete_complaint_histories(
+    ids: str = Query(..., min_length=1, pattern=r"^\d+(,\d+)*$", description="예: 1,2,3"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # 1) 파싱
+    id_list = [int(x) for x in ids.split(",")]
+
+    # 2) 현재 사용자 소유의 대상만 선택
+    q = (
+        db.query(ComplaintHistory)
+        .filter(
+            ComplaintHistory.user_uid == current_user.user_uid,
+            ComplaintHistory.id.in_(id_list),
+        )
+    )
+
+    # 3) 실제 존재/소유 레코드 수 확인
+    target_ids = [h.id for h in q.all()]
+    if not target_ids:
+        raise HTTPException(status_code=404, detail="삭제할 히스토리가 없거나 권한이 없습니다.")
+
+    # 4) 일괄 삭제
+    try:
+        (
+            db.query(ComplaintHistory)
+            .filter(
+                ComplaintHistory.user_uid == current_user.user_uid,
+                ComplaintHistory.id.in_(target_ids),
+            )
+            .delete(synchronize_session=False)
+        )
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"삭제 실패: {str(e)}")
+
+    # 5) 결과 메시지 (요청했지만 미존재/무권한 목록도 안내)
+    missing_or_forbidden = sorted(set(id_list) - set(target_ids))
+    if missing_or_forbidden:
+        msg = f"총 {len(target_ids)}건 삭제 완료. (삭제 제외: {missing_or_forbidden})"
+    else:
+        msg = f"총 {len(target_ids)}건 삭제 완료."
+
+    return ResponseMessage(message=msg)

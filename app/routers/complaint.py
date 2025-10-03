@@ -30,7 +30,7 @@ from pydantic import BaseModel
 
 from app.models.similar_history import SimilarHistory
 import json
-
+from fastapi import Query
 # 로그 전용
 import logging
 logger = logging.getLogger(__name__)  
@@ -217,12 +217,30 @@ def get_complaints(
     sort: Optional[str] = None,
     limit: Optional[int] = 10,
     skip: Optional[int] = 0, 
-    current_user: str = Depends(get_current_user)
+    status: Optional[str] = Query(
+        None, description="상태 필터: '답변전,수정중,답변완료' 중 쉼표로 복수 지정 가능"
+    ),
+    current_user: User = Depends(get_current_user)
 ):
+    # 기본 쿼리(소유자 제한)
     query = db.query(Complaint).filter(Complaint.user_uid == current_user.user_uid)
+
+    # 상태 필터
+    if status:
+        allowed = {"답변전", "수정중", "답변완료"}
+        wanted = {s.strip() for s in status.split(",") if s.strip()}
+        invalid = wanted - allowed
+        if invalid:
+            raise HTTPException(
+                status_code=400,
+                detail=f"허용되지 않은 상태 값: {sorted(invalid)}; 사용 가능: {sorted(allowed)}"
+            )
+        if wanted:
+            query = query.filter(Complaint.reply_status.in_(sorted(wanted)))
 
     total = query.count()
 
+    # 정렬
     if sort == "created_desc":
         complaints = query.order_by(Complaint.created_at.desc()).offset(skip).limit(limit).all()
     elif sort == "created_asc":

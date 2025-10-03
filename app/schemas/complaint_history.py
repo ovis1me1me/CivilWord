@@ -47,6 +47,7 @@ class HistorySimpleContent(BaseModel):
     title: str
     content: str
     reply_content: Optional[Any]
+    rating: Optional[int] = None
 
     class Config:
         orm_mode = True
