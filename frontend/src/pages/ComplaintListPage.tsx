@@ -5,6 +5,7 @@ import ComplaintList from '../component/ComplaintList/ComplaintList';
 import ComplaintListActions from '../component/ComplaintList/ComplaintListActions';
 import { useComplaintData } from '../hooks/useComplaintData';
 import { useEffect } from 'react';
+import ComplaintFilter from '../component/ComplaintList/ComplaintFilter'; // ✅ 필터 컴포넌트 import
 
 export default function ComplaintListPage() {
   const {
@@ -20,11 +21,12 @@ export default function ComplaintListPage() {
     totalCount,
     displayedCount,
     loadComplaints,
+    filterOption,      // ✅ useComplaintData 훅에서 가져오기
+    setFilterOption,   // ✅ useComplaintData 훅에서 가져오기
   } = useComplaintData();
 
   const navigate = useNavigate();
 
-  // ✅ answerStatus를 함께 받도록 수정
   const handleTitleClick = (id: number, answerStatus: string) => {
     if (answerStatus === '수정중' || answerStatus === '답변완료') {
       navigate(`/complaints/${id}/select-answer`);
@@ -33,8 +35,6 @@ export default function ComplaintListPage() {
     }
   };
 
-
-  // ✅ 페이지 최초 렌더링 시 토큰을 localStorage에 넣기
   useEffect(() => {
     const token = localStorage.getItem('token');
     console.log('현재 토큰:', localStorage.getItem('token'));
@@ -45,7 +45,14 @@ export default function ComplaintListPage() {
       <FileUploader onUploadSuccess={loadComplaints} />
 
       <div className="flex justify-end mt-2">
-        <SortingDropdown sortOption={sortOption} setSortOption={setSortOption} />
+        <ComplaintFilter 
+          filterOption={filterOption} 
+          setFilterOption={setFilterOption} 
+        />
+        <SortingDropdown 
+          sortOption={sortOption} 
+          setSortOption={setSortOption} 
+        />
       </div>
 
       <ComplaintList
@@ -62,6 +69,7 @@ export default function ComplaintListPage() {
         loadMore={loadMore}
         totalCount={totalCount}
         displayedCount={displayedCount}
+        selectedCount={selectedIds instanceof Set ? selectedIds.size : selectedIds.length}
       />
     </div>
   );

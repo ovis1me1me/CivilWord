@@ -80,7 +80,7 @@ export default function SimilarAnswersBlock({ index, similarAnswers, containerHe
             return (
               <div
                 key={itemIndex}
-                className="relative grid bg-gray-100 border rounded-lg p-4 mb-4"
+                className="grid bg-gray-100 border rounded-lg p-4 mb-4"
               >
                 {/* 1. 민원 요지 */}
                 <div className="flex flex-col mb-3"> {/* flex-col로 변경하여 레이블과 내용 분리 */}

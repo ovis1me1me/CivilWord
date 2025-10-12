@@ -2,58 +2,65 @@ import { useCallback, useEffect, useState } from 'react';
 import { fetchComplaints, deleteComplaint, downloadSelectedComplaints, moveToHistory } from '../utils/api';
 import { Complaint } from '../types/complaint';
 
+// ✅ 필터 옵션에 대한 타입을 명확하게 정의합니다.
+export type FilterOption = '전체' | '답변전' | '수정중' | '답변완료';
+
 export function useComplaintData() {
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [sortOption, setSortOption] = useState<'기본' | '날짜 오름' | '날짜 내림'>('기본');
+  const [filterOption, setFilterOption] = useState<FilterOption>('전체');
   const [totalCount, setTotalCount] = useState(0);
-
-  // ✅ complaints.length로 화면에 표시 중인 개수
   const displayedCount = complaints.length;
 
-  // ✅ 민원 목록 불러오기 함수 (페이지네이션 지원)
   const loadComplaints = useCallback(
-    async (skip = 0) => {
-      try {
-        const res = await fetchComplaints({
-          sort:
-            sortOption === '날짜 오름'
-              ? 'created_asc'
-              : sortOption === '날짜 내림'
-              ? 'created_desc'
-              : 'default',
-          limit: 10,
-          skip,
-        });
-        console.log('서버 응답:', res.data);
-        if (skip === 0) {
-          // 초기 로딩 or 새로고침
-          setComplaints(res.data.complaints);
-        } else {
-          // 더보기
-          setComplaints((prev) => [...prev, ...res.data.complaints]);
-        }
-        setTotalCount(res.data.total);
-      } catch (err) {
-        console.error('목록 불러오기 실패', err);
+  async (skip = 0) => {
+    try {
+      const params: Record<string, any> = {
+        sort:
+          sortOption === '날짜 오름'
+            ? 'created_asc'
+            : sortOption === '날짜 내림'
+            ? 'created_desc'
+            : 'default',
+        limit: 10,
+        skip,
+      };
+
+      // ✅ '전체'가 아닐 경우에만 status 파라미터로 추가
+      if (filterOption !== '전체') {
+        params.status = filterOption;
       }
-    },
-    [sortOption],
-  );
 
-  // ✅ 첫 렌더링 + 정렬 변경될 때 목록 로딩
+      console.log('📌 요청 파라미터:', params); // ← 확인용
+
+      const res = await fetchComplaints(params);
+
+      if (skip === 0) {
+        setComplaints(res.data.complaints);
+      } else {
+        setComplaints((prev) => [...prev, ...res.data.complaints]);
+      }
+      setTotalCount(res.data.total);
+    } catch (err) {
+      console.error('목록 불러오기 실패', err);
+    }
+  },
+  [sortOption, filterOption],
+);
+
+
   useEffect(() => {
+    // 정렬 또는 필터 옵션이 변경되면 목록을 처음부터 다시 불러옵니다.
     loadComplaints(0);
-  }, [loadComplaints]);
+  }, [loadComplaints]); // loadComplaints는 sortOption, filterOption에 의존하므로 이대로 충분합니다.
 
-  // ✅ 선택한 민원 toggle
   const toggleSelect = (id: number) => {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]
     );
   };
 
-  // ✅ 전체 선택/해제
   const toggleSelectAll = () => {
     if (selectedIds.length === complaints.length) {
       setSelectedIds([]);
@@ -62,7 +69,6 @@ export function useComplaintData() {
     }
   };
 
-  // ✅ 선택한 민원 삭제
   const deleteSelected = async () => {
     if (window.confirm('선택한 민원을 삭제하시겠습니까?')) {
       for (const id of selectedIds) {
@@ -73,7 +79,6 @@ export function useComplaintData() {
     }
   };
 
-  // ✅ 선택한 민원 다운로드 + 히스토리 이동
   const downloadSelected = async () => {
     if (
       window.confirm(
@@ -82,8 +87,6 @@ export function useComplaintData() {
     ) {
       try {
         const res = await downloadSelectedComplaints(selectedIds);
-
-        // 다운로드 처리
         const url = window.URL.createObjectURL(new Blob([res.data]));
         const link = document.createElement('a');
         link.href = url;
@@ -91,11 +94,7 @@ export function useComplaintData() {
         document.body.appendChild(link);
         link.click();
         link.remove();
-
-        // 히스토리로 이동
         await moveToHistory(selectedIds);
-
-        // 히스토리 페이지로 리디렉션
         window.location.href = '/complaints/history';
       } catch (err) {
         console.error('다운로드/히스토리 이동 실패', err);
@@ -104,12 +103,10 @@ export function useComplaintData() {
     }
   };
 
-  // ✅ 더보기 버튼
   const loadMore = () => {
     loadComplaints(complaints.length);
   };
 
-  // ✅ 최종 반환 (컴포넌트에서 필요한 것만 깔끔하게 반환!)
   return {
     complaints,
     selectedIds,
@@ -120,8 +117,11 @@ export function useComplaintData() {
     loadMore,
     sortOption,
     setSortOption,
-    totalCount,        // ✅ 실제 DB 전체 개수
-    displayedCount,    // ✅ 현재까지 로드된 개수 (화면 표시 개수)
-    loadComplaints,    // ✅ 파일 업로드 성공 시 reload 용
+    totalCount,
+    displayedCount,
+    loadComplaints,
+    // ✅ 4. 외부 컴포넌트(ComplaintListPage)에서 사용할 수 있도록 filter 상태와 세터를 반환합니다.
+    filterOption,
+    setFilterOption,
   };
 }
