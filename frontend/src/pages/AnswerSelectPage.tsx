@@ -232,7 +232,7 @@ export default function AnswerSelectPage() {
   };
 
   // ✅ 수정된: saveAnswer 함수 (rating 인자 추가)
-  const saveAnswer = async (status: '수정중' | '답변완료', rating: number | null = null) => {
+  const saveAnswer = async (status: '수정중' | '답변완료', rating?: number) => {
     if (!id || !selectedAnswer) return;
     try {
       const answerWithoutIds = stripIdsFromAnswer(selectedAnswer);
@@ -241,9 +241,7 @@ export default function AnswerSelectPage() {
 
       await Promise.all([
         updateReplyContent(Number(id), answerWithoutIds),
-        updateReplyStatus(Number(id), status)
-        // 여기에 rating 정보를 백엔드로 전송하는 API가 있다면 추가
-        // 예: sendRating(Number(id), rating)
+        updateReplyStatus(Number(id), status, rating)
       ]);
 
       navigate('/complaints');

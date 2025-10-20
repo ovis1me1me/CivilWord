@@ -35,7 +35,7 @@ export default function HistoryPage() {
 
   const navigate = useNavigate();
 
-  const handleTitleClick = (id: number) => navigate(`/history/${id}`);
+  const handleTitleClick = (id: number) => navigate(`/complaints/history/${id}`);
 
   useEffect(() => {
     loadHistory();

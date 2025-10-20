@@ -86,7 +86,7 @@ export default function SimilarAnswersBlock({ index, similarAnswers /*, containe
                           {Array.isArray(bodyItem.section) && bodyItem.section.length > 0 ? (
                             bodyItem.section.map((sectionItem, sectionIndex) => (
                               <p key={`${bodyIndex}-${sectionIndex}`} className="ml-8">
-                                {sectionItem.title ? `${sectionItem.title}. ` : ''}
+                                {sectionItem.title ? `${sectionItem.title} ` : ''}
                                 {sectionItem.text}
                               </p>
                             ))

@@ -147,7 +147,7 @@ export const fetchHistoryDetail = (id: number) =>
 
 /** ✅ 19. 유사 민원 히스토리 조회 */ // ✅ 새로 추가된 부분
 export const fetchSimilarHistories = async (id: number) => {
-  const response = await instance.get(`/history/${id}/similar`);
+  const response = await instance.get(`/complaints/${id}/history-similar`);
   return response.data;
 };
 

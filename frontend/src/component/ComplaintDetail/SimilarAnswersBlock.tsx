@@ -7,7 +7,7 @@ interface SimilarAnswersBlockProps {
   onSelect?: (payload: { summaryTitle: string; answerOptions: string[] }) => void;
 }
 
-const labels = ['가', '나', '다', '라', '마', '바', '사', '아', '자', '차', '카', '타', '파', '하']; // 한글 라벨
+// const labels = ['가', '나', '다', '라', '마', '바', '사', '아', '자', '차', '카', '타', '파', '하']; // 한글 라벨
 
 export default function SimilarAnswersBlock({ index, similarAnswers, containerHeight, onSelect }: SimilarAnswersBlockProps) {
   // 유사 민원이 없을 경우 메시지 표시
@@ -80,7 +80,7 @@ export default function SimilarAnswersBlock({ index, similarAnswers, containerHe
             return (
               <div
                 key={itemIndex}
-                className="grid bg-gray-100 border rounded-lg p-4 mb-4"
+                className="relative grid bg-gray-100 border rounded-lg p-4 mb-4"
               >
                 {/* 1. 민원 요지 */}
                 <div className="flex flex-col mb-3"> {/* flex-col로 변경하여 레이블과 내용 분리 */}
@@ -102,7 +102,7 @@ export default function SimilarAnswersBlock({ index, similarAnswers, containerHe
                         {Array.isArray(b.section) && b.section.length > 0 ? (
                           b.section.map((sub: any, subIndex: number) => (
                             <div key={`${bodyIndex}-${subIndex}`} className="flex items-start gap-2 ml-6 text-gray-600">
-                              <span className="font-bold">{labels[subIndex] || '•'}.</span>
+                              <span className="font-bold">{'•'}</span>
                               <span>{sub?.text}</span>
                             </div>
                           ))
