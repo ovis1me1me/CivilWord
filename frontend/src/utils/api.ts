@@ -151,11 +151,37 @@ export const fetchSimilarHistories = async (id: number) => {
   return response.data;
 };
 
+/** ✅ 단일 민원 생성  */
 export const createComplaint = (payload: {
   title: string;
   content: string;
   is_public: boolean;
 }) => instance.post('/complaints', payload);
+
+/** ✅ 히스토리 선택 삭제 (배치) */
+export const deleteHistoryItems = (ids: number[]) =>
+  instance.delete('/complaints/history', {
+    params: { ids: ids.join(',') },
+  });
+
+/** ✅ 히스토리 선택 엑셀 다운로드 */
+export const downloadSelectedHistories = (ids: number[]) =>
+  instance.get('/history/download-excel', {
+    params: { ids: ids.join(',') },
+    responseType: 'blob',
+  });
+
+/** ✅ 공용: blob 다운로드 헬퍼 */
+export const downloadBlob = (blob: Blob, filename: string) => {
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+};
 
 
 /** ✅ 기본 axios 인스턴스 export */

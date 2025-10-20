@@ -46,7 +46,7 @@ function App() {
         <Route path="/complaints/history" element={<Layout><HistoryPage /></Layout>} />
         <Route path="/complaints/history/:id" element={<Layout><HistoryDetailPage /></Layout>} />
         <Route path="/complaints/admin/replies" element={<Layout><AdminRepliesPage /></Layout>} />
-        <Route path="*" element={<Layout><EmptyPage /></Layout>} />
+        <Route path="*" element={<EmptyPage />} />
       </Routes>
     </Router>
   );

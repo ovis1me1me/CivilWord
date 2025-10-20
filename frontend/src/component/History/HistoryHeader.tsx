@@ -1,30 +1,35 @@
-interface HistoryHeaderProps {
+export interface HistoryHeaderProps {
   keyword: string;
   setKeyword: (keyword: string) => void;
 }
 
 export default function HistoryHeader({ keyword, setKeyword }: HistoryHeaderProps) {
+  // 내부 오프셋(ml/absolute 등) 제거. 폭/정렬은 부모(ContentCenter)가 담당.
   return (
-    <div className="ml-[250px]">
+    <div className="w-full">
       <div
         data-state="Inactive"
         data-type="Outline"
-        className="w-[850px] h-[40px] bg-white rounded outline outline-1 outline-offset-[-1px] outline-zinc-400 inline-flex flex-col justify-start items-start"
+        className="w-full h-10 bg-white rounded outline outline-1 outline-offset-[-1px] outline-zinc-400 flex items-center"
       >
-        <div className="self-stretch p-2.5 inline-flex justify-start items-start gap-3">
-          <div data-style="Outlined" className="w-6 h-6 relative overflow-hidden">
-            <div className="w-6 h-6 relative overflow-hidden flex items-center justify-center">
-              <img src="/src/assets/Leading_Icon.png" alt="Leading Icon" className="w-4 h-4" />
-            </div>
-          </div>
-          <input
-            type="text"
-            placeholder="Search"
-            className="flex-1 bg-transparent text-stone-500 text-base font-normal font-['Balsamiq_Sans'] leading-normal outline-none"
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
+        {/* Leading Icon */}
+        <div className="pl-3 pr-2 flex items-center justify-center">
+          {/* 프로젝트 자산 경로 유지 (필요 시 아이콘 컴포넌트로 대체 가능) */}
+          <img
+            src="/src/assets/Leading_Icon.png"
+            alt="Search"
+            className="w-4 h-4"
           />
         </div>
+
+        {/* Input */}
+        <input
+          type="text"
+          placeholder="Search"
+          className="flex-1 bg-transparent text-stone-600 text-base leading-normal outline-none placeholder:text-stone-400"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+        />
       </div>
     </div>
   );

@@ -99,7 +99,7 @@ export default function HistoryDetailPage() {
                           bodyItem.section.map((sectionItem, sectionIndex) => (
                             <p key={`${bodyIndex}-${sectionIndex}`} className="ml-8">
                               {/* sectionItem.title이 있다면 함께 렌더링 */}
-                              {sectionItem.title ? `${sectionItem.title}. ` : ''}
+                              {sectionItem.title ? `${sectionItem.title} ` : ''}
                               {sectionItem.text}
                             </p>
                           ))
