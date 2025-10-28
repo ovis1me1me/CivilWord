@@ -1,8 +1,9 @@
 .main-layout {
-  display: flex;
+  display:flex; 
+  background: linear-gradient(180deg,#f2f6fb 0%, #ffffff 40%, #ffffff 100%);
 }
 
 .main-content {
   flex-grow: 1;
-  padding: 20px;
+  padding: 0px;
 }

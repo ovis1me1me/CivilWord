@@ -20,8 +20,9 @@
   max-height: 90vh;
   padding: 40px;
   box-sizing: border-box;
-  background-color: white;
-  border-radius: 0;
+  background-color: rgb(255, 255, 255);
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(10,39,71,.10);
 }
 
 /* 타이틀 */
@@ -29,7 +30,7 @@
   font-size: 23px;
   text-align: center;
   margin-bottom: 24px;
-  color: #444;
+  color: #0a2747;
 }
 
 /* 예시 링크 */
@@ -50,14 +51,21 @@
 
 /* 업로드 박스 */
 .upload-box {
-  background-color: #f8f8f8;
-  border-radius: 8px;
+  background-color: #eff1f4;
+  border-radius: 12px;
   padding: 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
   cursor: pointer;
+  border: 1px solid #e5eef9;
+}
+
+/* 드롭존 강조 스타일(기존 유지 + 보강) */
+.upload-box.dragging {
+  border-color:#1f5fae; 
+  background-color:#eef6ff;
 }
 
 .upload-label {
@@ -90,23 +98,25 @@
   font-size: 1rem;
   font-weight: 600;
   border: none;
-  border-radius: 6px;
-  background-color: black;
+  border-radius: 12px;
+  background: linear-gradient(90deg,#174a86 0%, #1f5fae 60%, #387dcc 100%);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: background-color 0.3s ease;
+  box-shadow: 0 8px 22px rgba(56,125,204,.28);
+  transition: filter .2s ease;
 }
 
 .generate-button:hover {
-  background-color: #6f6f6f;
+  filter: brightness(1.15);
 }
 
 .generate-button.disabled {
-  background-color: #9ca3af;
+  background: linear-gradient(90deg,#9fb7d6 0%, #a9c4e3 60%, #bcd6f1 100%);
   cursor: not-allowed;
+  box-shadow:none;
 }
 
 /* 아이콘 */
@@ -166,9 +176,9 @@ input, textarea, select, button {
   cursor: pointer;
 }
 .tab-btn.active {
-  background: #111;
+  background: #0a2747;
   color: #fff;
-  border-color: #111;
+  border-color: #0a2747;
 }
 
 /* 싱글 입력 폼 */
@@ -209,12 +219,5 @@ input, textarea, select, button {
   border-color: #111;
 }
 
-/* 드롭존 강조 스타일(기존 유지 + 보강) */
-.upload-box {
-  border: 1.5px #d1d5db;
-}
-.upload-box.dragging {
-  border-color: #111;
-  background-color: #f3f4f6;
-}
+
 

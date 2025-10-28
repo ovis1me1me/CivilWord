@@ -1,22 +1,24 @@
 .sidebar {
   width: 250px;
   background-color: #f8f8f8;
+  background: linear-gradient(180deg, #081b31 0%, #0a2747 60%, #0f3560 100%);
   height: 100vh;
   padding: 20px;
-  box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+  box-shadow: 2px 0 16px rgba(0,0,0,0.12);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   position: fixed;
   font-family: 'Noto Sans KR', sans-serif;
   font-size: 16px; /* 기본 글자 크기 키움 */
-  color: #333;
+  color: #e6edf8;
 }
 
-.sidebar-title {
+.sidebar-title a {
   font-size: 22px; /* 제목은 더 크게 */
-  font-weight: bold;
+  font-weight: 800;
   margin-bottom: 30px;
+  color:#e6edf8;
 }
 
 .sidebar-section {
@@ -39,58 +41,66 @@
   display: flex;
   align-items: center;
   gap: 12px; /* 아이콘과 텍스트 간격 키움 */
-  color: #333;
+  color: #d9ecff;
   font-size: 16px; /* 리스트 글자 크기 */
 }
 
 /* 링크 기본 스타일 - padding과 border 미리 적용 */
 .sidebar-section a {
   text-decoration: none;
-  color: #333;
+  color: #d9ecff;
   display: flex;
   align-items: center;
   gap: 12px;
   font-size: 16px;
-  padding: 2px 3px;
-  border-radius: 6px;
+  padding: 8px 10px;
+  border-radius: 10px;
   border: 1px solid transparent; /* ✅ 기본값도 border 있어야 움직이지 않음 */
-  transition: background-color 0.2s, color 0.2s;
+  transition: background-color 0.2s, color 0.2s, border-color .2s;
 }
 
 /* hover 시 강조 효과만 변경 (레이아웃 변화 없음) */
 .sidebar-section a:hover {
-  background-color: #e0e0e0;
-  color: #000;
-  border-color: transparent; /* 혹시 hover에서 border 생길 경우 대비 */
+  background: rgba(255,255,255,0.08);
+  color: #ffffff;
+  border-color: rgba(255,255,255,0.12); /* 혹시 hover에서 border 생길 경우 대비 */
+}
+
+/* 현재 라우트 활성 상태(선택) 표시용: a.active 등 라우터에서 붙이기만 하면 됨 */
+.sidebar-section a.active {
+  background: linear-gradient(90deg, #387dcc 0%, #1f5fae 100%);
+  color:#fff;
+  border-color: transparent;
+  box-shadow: 0 6px 18px rgba(56,125,204,0.35);
 }
 
 .sidebar-footer button {
   background: none;
-  color: #333;
+  color: #e6edf8;
   cursor: pointer;
   font-size: 16px;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 2px 3px;
-  border-radius: 6px;
+  padding: 8px 10px;
+  border-radius: 10px;
   border: 1px solid transparent; /* ✅ 기본값도 border 있어야 움직이지 않음 */
-  transition: background-color 0.2s, color 0.2s;
+  transition: background-color .2s, color .2s, border-color .2s;
 }
 
 .sidebar-footer button:hover {
-  background-color: #e0e0e0;
-  color: #000;
-  border-color: transparent;
+  background: rgba(255,255,255,0.08);
+  color: #ffffff;
+  border-color: rgba(255,255,255,0.12);
 }
 
 .sidebar img {
   width: 20px; /* 아이콘 크기 키움 */
   height: 20px;
   object-fit: contain;
-  display: inline-block;
+  filter: brightness(100%)
   /* vertical-align 제거, flex container로 정렬 */
-  margin-right: 0; /* gap 으로 간격 조정 중복 제거 */
+ /* gap 으로 간격 조정 중복 제거 */
 }
 
 .sidebar-label-with-edit {

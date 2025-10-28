@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
-import { BookOpenText } from 'lucide-react';
+import { FolderOpen } from 'lucide-react';
 import HistoryHeader from '../component/History/HistoryHeader';
 import HistoryList from '../component/History/HistoryList';
 import ContentCenter from '../component/Common/ContentCenter';
@@ -11,6 +11,7 @@ import {
   downloadSelectedHistories,
   downloadBlob,
 } from '../utils/api';
+import PageHeader from '../component/Common/PageHeader';
 
 export default function HistoryPage() {
   const [keyword, setKeyword] = useState('');
@@ -68,16 +69,14 @@ export default function HistoryPage() {
 
   return (
     <div className="flex flex-col w-full min-h-screen bg-gradient-to-b from-blue-50 via-white to-white">
-      <div className="w-full bg-gradient-to-r from-blue-950 via-blue-900 to-blue-800 shadow-md py-6 mb-6">
-        <ContentCenter hasSidebar={hasSidebar}>
-          <div className="flex items-center gap-3">
-            <BookOpenText size={32} className="text-white drop-shadow-md" />
-            <h2 className="text-3xl font-bold text-white tracking-tight">히스토리 목록</h2>
-          </div>
-        </ContentCenter>
-      </div>
+      <PageHeader
+        title="히스토리 목록"
+        hasSidebar={hasSidebar}
+        icon={<FolderOpen size={30} className="text-white drop-shadow-md" />}
+        maxWidthClass="max-w-[1000px]"
+      />
 
-      <ContentCenter hasSidebar={hasSidebar}>
+      <ContentCenter hasSidebar={hasSidebar} maxWidthClass="max-w-[1000px]">
         <HistoryHeader keyword={keyword} setKeyword={setKeyword} />
 
         <div className="mt-3 flex items-center justify-between">

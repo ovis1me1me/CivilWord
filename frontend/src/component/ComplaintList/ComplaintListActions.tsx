@@ -22,7 +22,7 @@ export default function ComplaintListActions({
   const disabled = selectedCount === 0 || isProcessing;
 
   return (
-    <div className="flex flex-col items-center mt-4 gap-4 ml-[250px]"> {/* 사이드 바 고려하여 중앙 위치*/}
+    <div className="flex flex-col items-center mt-4 gap-4"> {/* 사이드 바 고려하여 중앙 위치*/}
       <div className="flex justify-center w-full">
         {displayedCount < totalCount && (
           <button

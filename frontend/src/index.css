@@ -71,6 +71,50 @@ button:focus-visible {
 @tailwind components;
 @tailwind utilities;
 
+/* 시스템 폰트 + 다크블루 대비 좋은 기본 톤 */
 :root {
-  font-family: 'Noto Sans KR', sans-serif;
+  font-family: 'Noto Sans KR', system-ui, sans-serif;
+  color-scheme: light;
+}
+
+@layer base {
+  html, body, #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-gov-50 text-slate-800 antialiased;
+  }
+
+  h1 { @apply text-3xl font-bold text-gov-900; }
+  h2 { @apply text-2xl font-semibold text-gov-900; }
+  h3 { @apply text-xl font-semibold text-gov-900; }
+
+  a { @apply text-accent-700 hover:text-accent-800 underline-offset-2; }
+}
+
+/* 공통 패턴(페이지/헤더/카드/버튼/입력) */
+@layer components {
+  .page {
+    @apply container mx-auto px-4;
+  }
+  .page-header {
+    @apply w-full bg-gradient-to-r from-gov-950 via-gov-800 to-gov-700 text-white;
+  }
+  .page-header-inner {
+    @apply page py-6 flex items-center gap-3;
+  }
+  .card {
+    @apply bg-white rounded-2xl shadow-soft;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center px-4 py-2 rounded-xl font-semibold
+           bg-gov-700 text-white hover:bg-gov-800 transition;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center px-4 py-2 rounded-xl font-semibold
+           bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 transition;
+  }
+  .input {
+    @apply block w-full rounded-xl border-slate-300 focus:border-gov-700 focus:ring-gov-700;
+  }
 }

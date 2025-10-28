@@ -29,7 +29,7 @@ export default function FileUploader({ onUploadSuccess }: Props) {
   };
 
   return (
-    <div className="flex items-center bg-neutral-100 rounded-lg h-10 mt-4 ml-[250px]">
+    <div className="flex items-center bg-gray-100 rounded-lg h-10 mt-4">
       <div className="flex justify-between w-full">
         <span className="flex-1 text-black text-base font-medium ml-5 mt-2">{fileName}</span>
         <label

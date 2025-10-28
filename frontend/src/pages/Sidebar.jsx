@@ -12,6 +12,7 @@ import {
   logout,
 } from '../assets/icons';
 import { fetchUserInfo } from '../utils/api';
+import { FolderOpen, TableOfContents, LogOut, Mail, Phone, Search, Smile, SquarePen} from 'lucide-react';
 
 const Sidebar = () => {
   const navigate = useNavigate();
@@ -48,13 +49,13 @@ const Sidebar = () => {
       <div className="sidebar-section">
         <div className="sidebar-label-with-edit">
           <p className="sidebar-label">프로필</p>
-          <img src={edit} alt="수정 아이콘" className="edit-icon" onClick={() => navigate('/userinfo', { state: { from: location.pathname } })} />
+          <SquarePen className="edit-icon" onClick={() => navigate('/userinfo', { state: { from: location.pathname } })} />
         </div>
         <ul>
-          <li><img src={nameIcon} alt="이름 아이콘" /> {userInfo.name}</li>
-          <li><img src={department} alt="부서 아이콘" /> {userInfo.department}</li>
-          <li><img src={contact} alt="연락처 아이콘" /> {userInfo.contact}</li>
-          <li><img src={email} alt="이메일 아이콘" /> {userInfo.email}</li>
+          <li>{<Smile size={20} className="text-white drop-shadow-md" />} {userInfo.name}</li>
+          <li>{<Search size={20} className="text-white drop-shadow-md" />} {userInfo.department}</li>
+          <li>{<Phone size={20} className="text-white drop-shadow-md" />}{userInfo.contact}</li>
+          <li>{<Mail size={20} className="text-white drop-shadow-md" />} {userInfo.email}</li>
         </ul>
       </div>
 
@@ -63,12 +64,12 @@ const Sidebar = () => {
         <ul>
           <li>
             <Link to="/complaints">
-              <img src={list} alt="민원 목록 아이콘" /> 민원 목록
+              {<TableOfContents size={20} className="text-white drop-shadow-md" />} 민원 목록
             </Link>
           </li>
           <li>
             <Link to="/complaints/history">
-              <img src={history} alt="히스토리 아이콘" /> 히스토리
+              {<FolderOpen size={20} className="text-white drop-shadow-md" />} 히스토리
             </Link>
           </li>
         </ul>
@@ -76,7 +77,7 @@ const Sidebar = () => {
 
       <div className="sidebar-footer">
         <button onClick={handleLogout}>
-          <img src={logout} alt="로그아웃 아이콘" /> 로그아웃
+          {<LogOut size={20} className="text-white drop-shadow-md" />} 로그아웃
         </button>
       </div>
     </div>
