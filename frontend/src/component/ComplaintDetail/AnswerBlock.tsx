@@ -1,10 +1,11 @@
 import { Plus, Minus } from 'lucide-react';
 import React, { useRef, useEffect } from 'react';
 
+// ... (Interface, Props는 변경 없음)
 interface AnswerBlockProps {
   index: number;
-  summaryTitle: string; // 민원 요지
-  answerOptions: string[]; // 답변 요지
+  summaryTitle: string;
+  answerOptions: string[];
   onSummaryChange: (value: string) => void;
   onAddAnswer: () => void;
   onDeleteAnswer: (answerIndex: number) => void;
@@ -22,8 +23,8 @@ export default function AnswerBlock({
   onAnswerChange,
   onAddSummary,
 }: AnswerBlockProps) {
+  // ... (Hooks 로직은 변경 없음)
   const labels = ['•'];
-
   const summaryTextareaRef = useRef<HTMLTextAreaElement>(null);
   const answerTextareaRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
 
@@ -46,14 +47,17 @@ export default function AnswerBlock({
 
   return (
     <div className="space-y-4 mb-6">
-      <div className="text-xl font-semibold text-black mb-2">
+      {/* ✅ text-slate-800 */}
+      <div className="text-xl font-semibold text-slate-800 mb-2">
         <span>답변 요지{index > 0 ? `_${index + 1}` : ''}</span>
       </div>
 
-      <div className="bg-gray-200 border rounded-lg p-4 space-y-2">
+      {/* ✅ (수정) bg-slate-50, border-slate-200 */}
+      <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-2">
         <div className="mb-1">
           <textarea
             ref={summaryTextareaRef}
+            // ... (props)
             value={summaryTitle}
             onChange={(e) => onSummaryChange(e.target.value)}
             onInput={(e) => adjustTextareaHeight(e.currentTarget)}
@@ -65,18 +69,20 @@ export default function AnswerBlock({
 
         {answerOptions.map((option, i) => (
           <div key={i} className="flex items-start gap-2">
+            {/* ✅ (수정) bg-slate-800, border-slate-800 (기존 black과 유사하지만 세련됨) */}
             <button
               onClick={onAddAnswer}
-              className="w-6 h-6 flex items-center mt-1 text-white justify-center bg-black hover:text-green-500 hover:bg-white rounded-full flex-shrink-0"
+              className="w-6 h-6 flex items-center mt-1 text-white justify-center bg-slate-800 hover:text-green-500 hover:bg-white rounded-full flex-shrink-0 border border-slate-800 transition"
               type="button"
               title="요지 추가"
             >
               <Plus className="w-5 h-5" />
             </button>
 
+            {/* ✅ (수정) bg-slate-800, border-slate-800 */}
             <button
               onClick={() => onDeleteAnswer(i)}
-              className="w-6 h-6 flex items-center mt-1 text-white justify-center bg-black hover:text-red-500 hover:bg-white rounded-full flex-shrink-0"
+              className="w-6 h-6 flex items-center mt-1 text-white justify-center bg-slate-800 hover:text-red-500 hover:bg-white rounded-full flex-shrink-0 border border-slate-800 transition"
               type="button"
               title="요지 삭제"
             >
@@ -85,7 +91,7 @@ export default function AnswerBlock({
 
             <span className="w-5 font-bold pt-1 flex-shrink-0">{labels[i] || '•'}</span>
             <textarea
-              // 이 부분을 수정했습니다.
+              // ... (props)
               ref={(el: HTMLTextAreaElement | null) => {
                 answerTextareaRefs.current[i] = el;
               }}
@@ -101,9 +107,10 @@ export default function AnswerBlock({
       </div>
 
       <div className="flex justify-center mt-4">
+        {/* ✅ (수정) bg-slate-800, hover:bg-slate-900 (기존 black/gray 대신) */}
         <button
           onClick={onAddSummary}
-          className="w-2/5 flex justify-center gap-1 px-4 py-1.5 bg-gray-400 text-white text-sm font-semibold rounded-full hover:bg-gray-500"
+          className="w-2/5 flex justify-center gap-1 px-4 py-1.5 bg-slate-800 text-white text-sm font-semibold rounded-full hover:bg-slate-900 transition"
         >
           <Plus className="w-5 h-5" /> 요지 추가하기
         </button>

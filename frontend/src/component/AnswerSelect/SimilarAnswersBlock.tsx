@@ -2,117 +2,158 @@ import React from 'react';
 
 interface SimilarAnswersBlockProps {
   index: number;
-  similarAnswers: { title: string; summary: string; content: any }[]; // content 타입을 any로 확장
-  // containerHeight?: number; // 이 부분을 제거합니다.
+  similarAnswers: { title: string; summary: string; content: any }[];
 }
 
-export default function SimilarAnswersBlock({ index, similarAnswers /*, containerHeight*/ }: SimilarAnswersBlockProps) {
-  console.log('SimilarAnswersBlock - similarAnswers prop:', similarAnswers);
-  console.log('SimilarAnswersBlock - similarAnswers length:', similarAnswers?.length);
+// ✅ (추가) bodyItem의 타입을 정의합니다.
+interface BodyItem {
+  index?: string;
+  section?: SectionItem[]; // SectionItem 타입을 사용합니다.
+}
 
-  // 유사 민원이 없을 경우 메시지 표시
+// ✅ (추가) sectionItem의 타입을 정의합니다.
+interface SectionItem {
+  title?: string;
+  text: string;
+}
+
+export default function SimilarAnswersBlock({
+  index,
+  similarAnswers,
+}: SimilarAnswersBlockProps) {
+  // 유사 민원이 없을 경우
   if (!similarAnswers || similarAnswers.length === 0) {
     return (
       <div className="space-y-4 w-full">
-        {/* 제목: 박스 바깥 */}
-        <div className="text-xl font-semibold text-black mb-2">
+        {/* ✅ (수정) text-slate-800 적용 */}
+        <div className="text-xl font-semibold text-slate-800 mb-2">
           <span>유사 민원</span>
         </div>
-        {/* 회색 박스: 내용만 감쌈 */}
-        <div
-          className="bg-zinc-200 border rounded-lg p-4 w-full flex items-center justify-center text-gray-600"
-          // style={{ minHeight: containerHeight || 'auto' }} // 이 부분을 제거합니다.
-        >
+        {/* ✅ (수정) bg-slate-50, border, text-slate-500 적용 */}
+        <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 w-full flex items-center justify-center text-slate-500">
           유사 민원이 없습니다.
         </div>
       </div>
     );
   }
 
+  // 유사 민원이 있을 경우
   return (
     <div className="space-y-4 w-full p-4">
-      {/* 제목: 박스 바깥 */}
-      <div className="text-xl font-semibold text-black mb-2">
+      {/* ✅ (수정) text-slate-800 적용 */}
+      <div className="text-xl font-semibold text-slate-800 mb-2">
         <span>유사 민원</span>
       </div>
 
-      {/* 회색 박스: 내용만 감쌈 */}
-      {/* 이 div는 이제 각 유사 민원 항목을 감싸는 역할이 아니라, 실제 내용이 렌더링되는 곳입니다. */}
-      {/* 이 부분의 `bg-white` 클래스는 `bg-zinc-300`이 아니라 `SimilarAnswersBlock`의 부모 요소에 적용됩니다. */}
       {similarAnswers.map((answerItem, itemIndex) => {
-        let sectionCounter = 1; // 각 유사 민원 답변 내용마다 섹션 번호 초기화
+        let sectionCounter = 1;
         return (
           <div
             key={itemIndex}
-            className="bg-white border rounded-lg p-4 mb-4 shadow-sm" // 이 부분이 각 답변 항목의 스타일을 정의합니다.
+            // ✅ (수정) border-slate-300 적용
+            className="bg-white border border-slate-300 rounded-lg p-4 mb-4 shadow-sm"
           >
             {/* 1. 민원 요지 */}
             <div className="mb-3">
-              <span className="font-semibold block mb-1">민원 요지:</span>
-              <p className=" pl-4 text-md break-words">
-                {typeof answerItem.summary === 'object' ? JSON.stringify(answerItem.summary) : answerItem.summary}
+              {/* ✅ (수정) text-slate-700 적용 */}
+              <span className="font-semibold block mb-1 text-slate-700">
+                민원 요지:
+              </span>
+              {/* ✅ (수정) text-slate-700 적용 */}
+              <p className=" pl-4 text-md break-words text-slate-700">
+                {typeof answerItem.summary === 'object'
+                  ? JSON.stringify(answerItem.summary)
+                  : answerItem.summary}
               </p>
             </div>
 
             {/* 2. 답변 내용 */}
             <div>
-              <span className="font-semibold block mb-2">답변 내용:</span>
-              {/* answerItem.content가 객체 형태일 경우 계층적으로 렌더링 */}
-              {typeof answerItem.content === 'object' && answerItem.content !== null ? (
-                <>
-                  {/* 헤더 */}
+              {/* ✅ (수정) text-slate-700 적용 */}
+              <span className="font-semibold block mb-2 text-slate-700">
+                답변 내용:
+              </span>
+              {typeof answerItem.content === 'object' &&
+              answerItem.content !== null ? (
+                // ✅ (수정) 텍스트 색상 slate로 변경
+                <div className="text-slate-700">
                   <p className="whitespace-pre-line pl-4">
-                    <span className="font-semibold">{sectionCounter++}. </span> {answerItem.content.header || '없음'}
+                    <span className="font-semibold">{sectionCounter++}. </span>{' '}
+                    {answerItem.content.header || '없음'}
                   </p>
-                  {/* 요약 */}
                   <p className="whitespace-pre-line mt-2 pl-4">
-                    <span className="font-semibold">{sectionCounter++}. </span> {answerItem.content.summary || '없음'}
+                    <span className="font-semibold">{sectionCounter++}. </span>{' '}
+                    {answerItem.content.summary || '없음'}
                   </p>
 
-                  {/* 본문 (body) 내용 렌더링 */}
-                  {Array.isArray(answerItem.content.body) && answerItem.content.body.length > 0 ? (
-                    answerItem.content.body.map((bodyItem, bodyIndex) => {
-                      const currentSectionNumber = sectionCounter++;
-                      return (
-                        <div key={bodyIndex} className="whitespace-pre-line mt-2 pl-4">
-                          <span className="font-semibold">{currentSectionNumber}. </span>
-                          {/* bodyItem.index (본문 소제목) 렌더링 */}
-                          {bodyItem.index && (
-                            <p className="inline-block font-bold">
-                              {bodyItem.index}
-                            </p>
-                          )}
-                          {/* bodyItem.section (실제 본문 내용) 렌더링 */}
-                          {Array.isArray(bodyItem.section) && bodyItem.section.length > 0 ? (
-                            bodyItem.section.map((sectionItem, sectionIndex) => (
-                              <p key={`${bodyIndex}-${sectionIndex}`} className="ml-8">
-                                {sectionItem.title ? `${sectionItem.title} ` : ''}
-                                {sectionItem.text}
+                  {Array.isArray(answerItem.content.body) &&
+                  answerItem.content.body.length > 0 ? (
+                    // ✅ (수정) 타입 명시
+                    answerItem.content.body.map(
+                      (bodyItem: BodyItem, bodyIndex: number) => {
+                        const currentSectionNumber = sectionCounter++;
+                        return (
+                          <div
+                            key={bodyIndex}
+                            className="whitespace-pre-line mt-2 pl-4"
+                          >
+                            <span className="font-semibold">
+                              {currentSectionNumber}.{' '}
+                            </span>
+                            {bodyItem.index && (
+                              // ✅ (수정) text-slate-800 (더 진하게)
+                              <p className="inline-block font-bold text-slate-800">
+                                {bodyItem.index}
                               </p>
-                            ))
-                          ) : (
-                            <p className="ml-8">내용이 없습니다.</p>
-                          )}
-                        </div>
-                      );
-                    })
+                            )}
+                            {Array.isArray(bodyItem.section) &&
+                            bodyItem.section.length > 0 ? (
+                              // ✅ (수정) 타입 명시
+                              bodyItem.section.map(
+                                (
+                                  sectionItem: SectionItem,
+                                  sectionIndex: number
+                                ) => (
+                                  <p
+                                    key={`${bodyIndex}-${sectionIndex}`}
+                                    className="ml-8"
+                                  >
+                                    {sectionItem.title
+                                      ? `${sectionItem.title} `
+                                      : ''}
+                                    {sectionItem.text}
+                                  </p>
+                                )
+                              )
+                            ) : (
+                              // ✅ (수정) text-slate-500 적용
+                              <p className="ml-8 text-slate-500">
+                                내용이 없습니다.
+                              </p>
+                            )}
+                          </div>
+                        );
+                      }
+                    )
                   ) : (
-                    // body가 배열이 아니거나 비어있을 경우 (단순 문자열 등)
                     <p className="whitespace-pre-line mt-2 pl-4">
                       <span className="font-semibold">{sectionCounter++}. </span>
-                      {(answerItem.content?.body ? String(answerItem.content.body) : '본문이 없습니다.')}
+                      {answerItem.content?.body
+                        ? String(answerItem.content.body)
+                        : '본문이 없습니다.'}
                     </p>
                   )}
 
-                  {/* 푸터 */}
                   <p className="whitespace-pre-line mt-2 pl-4">
-                    <span className="font-semibold">{sectionCounter++}. </span> {answerItem.content.footer || '없음'}
+                    <span className="font-semibold">{sectionCounter++}. </span>{' '}
+                    {answerItem.content.footer || '없음'}
                   </p>
-                </>
+                </div>
               ) : (
-                // content가 객체가 아닐 경우 (기존처럼 문자열로 출력)
-                <p className="pl-4 text-md break-words">
-                  {typeof answerItem.content === 'object' ? JSON.stringify(answerItem.content) : answerItem.content}
+                <p className="pl-4 text-md break-words text-slate-700">
+                  {typeof answerItem.content === 'object'
+                    ? JSON.stringify(answerItem.content)
+                    : answerItem.content}
                 </p>
               )}
             </div>

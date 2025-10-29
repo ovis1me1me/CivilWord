@@ -156,11 +156,11 @@ function UploadExcel() {
 
         {/* 단일 민원 입력 모드 */}
         {mode === 'single' && (
-          <div className="single-form">
+          // ✅ 'upload-box' 클래스를 추가해 동일한 스타일을 적용합니다.
+          <div className="single-form upload-box">
             <div className="field">
               <div className="label-row">
                 <label htmlFor="title" className="label">제목</label>
-                {/* ✅ 공개 체크박스를 제목 라벨 오른쪽으로 */}
                 <label className="public-checkbox">
                   <input
                     type="checkbox"

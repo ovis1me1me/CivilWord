@@ -20,6 +20,10 @@
   display: flex;
   flex-direction: column;
   width: 400px;
+  padding: 40px; /* 박스 안 여백을 위해 패딩 추가 */
+  background-color: white; /* 그림자가 보이도록 배경색을 흰색으로 설정 */
+  border-radius: 12px; /* 박스 모서리를 조금 더 둥글게 */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* 은은한 그림자 효과 */
 }
 
 /* 라벨 */
@@ -42,7 +46,7 @@
 .form-box button {
   margin-top: 40px;
   padding: 14px;
-  background-color: black;
+  background: linear-gradient(90deg,#174a86 0%, #1f5fae 60%, #387dcc 100%);
   color: white;
   border: none;
   font-weight: bold;
@@ -53,5 +57,5 @@
 }
 
 .form-box button:hover {
-  background-color: #333;
+  background: linear-gradient(90deg,#9fb7d6 0%, #a9c4e3 60%, #bcd6f1 100%);
 }
