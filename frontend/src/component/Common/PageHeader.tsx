@@ -19,7 +19,11 @@ export default function PageHeader({
   rightContent // ✅ (추가)
 }: Props) {
   return (
-    <div className={`w-full bg-gradient-to-r from-gov-950 via-gov-800 to-gov-700 shadow-md py-6 mb-6 ${className}`}>
+    <div className={`w-full shadow-md py-6 mb-6 ${className}`}
+          style={{
+            background: 'linear-gradient(90deg, #0a2747 7%, #18497f 60%, #1f5b9a 100%)',
+          }}
+        >
       <ContentCenter hasSidebar={hasSidebar} maxWidthClass={maxWidthClass}>
         
         {/* ✅ (수정) flex, justify-between, items-center 추가 */}

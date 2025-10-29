@@ -66,7 +66,7 @@ export default function RightPanel({
           ${
             isGenerating
               ? 'bg-slate-400 cursor-not-allowed' // Disabled
-              : 'bg-slate-800 hover:bg-slate-900' // Enabled
+              : 'bg-gradient-to-r from-gov-950 via-gov-800 to-gov-700 hover:opacity-90' // Enabled
           } text-white`}
       >
         {isGenerating ? '재생성 중...' : '답변 재생성'}

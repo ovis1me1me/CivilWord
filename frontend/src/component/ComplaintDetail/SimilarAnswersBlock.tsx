@@ -153,7 +153,7 @@ export default function SimilarAnswersBlock({
                   <button
                     type="button"
                     onClick={() => onSelect?.({ summaryTitle, answerOptions })}
-                    className="px-3 py-1.5 rounded-full text-sm font-semibold bg-slate-800 text-white hover:bg-slate-900 transition"
+                    className="px-3 py-1.5 rounded-full text-sm font-semibold bg-gov-800 text-white hover:bg-slate-900 transition"
                     title="이 유사 민원의 요지를 답변 요지에 채워 넣합니다"
                   >
                     답변

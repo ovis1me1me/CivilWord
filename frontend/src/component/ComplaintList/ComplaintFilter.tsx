@@ -15,7 +15,7 @@ const filterOptions: { value: FilterOption; label: string }[] = [
 
 export default function ComplaintFilter({ filterOption, setFilterOption }: ComplaintFilterProps) {
   return (
-    <div className="relative inline-block w-32 mr-4 mt-4 text-gray-700">
+    <div className="relative inline-block w-32 mr-2 mt-4 text-gray-700">
       <select
         value={filterOption}
         onChange={(e) => setFilterOption(e.target.value as FilterOption)}

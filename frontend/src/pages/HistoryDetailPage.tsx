@@ -2,7 +2,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { fetchHistoryDetail } from '../utils/api';
 
-import PageHeader from '../component/Common/PageHeader';
 import ContentCenter from '../component/Common/ContentCenter';
 import { FileText } from 'lucide-react';
 import Spinner from '../component/Shared/Spinner';
@@ -49,10 +48,11 @@ export default function HistoryDetailPage() {
     );
   }
 
+  // ✅ ComplaintDetailPage와 동일한 ‘목록으로’ 버튼 스타일
   const backButton = (
     <button
       onClick={() => navigate('/complaints/history')}
-      className="bg-white text-slate-700 border border-slate-300 font-semibold px-4 py-2 rounded-lg text-sm hover:bg-slate-50 transition-colors"
+      className="bg-gradient-to-r from-gov-950 via-gov-800 to-gov-700 hover:opacity-90 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-colors"
     >
       목록으로
     </button>
@@ -61,19 +61,24 @@ export default function HistoryDetailPage() {
   let mainSectionCounter = 1;
 
   return (
-    <div className="bg-slate-50 min-h-screen pb-12">
-      <PageHeader
-        title={complaint.title}
-        icon={<FileText size={30} className="text-white drop-shadow-md" />}
-        hasSidebar={true}
-        maxWidthClass="max-w-[1000px]"
-        rightContent={backButton}
-      />
-
+    <div className="min-h-screen pb-12">
       <ContentCenter hasSidebar={true} maxWidthClass="max-w-[1000px]">
-        {/* ✅ (수정) 그림자 효과 강화 (shadow-xl shadow-slate-300) */}
         <div className="bg-white p-6 rounded-lg shadow-[0_0_15px_rgba(0,0,0,0.1)] w-full space-y-6 relative mt-8">
           
+          {/* ✅ ComplaintDetailPage 스타일 헤더 */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <FileText size={26} className="text-gov-800" />
+              <h1 className="text-xl md:text-2xl font-semibold text-blue-950">
+                {complaint.title}
+              </h1>
+            </div>
+            {backButton}
+          </div>
+
+          {/* 구분선 */}
+          <div className="border-b-4 border-gov-800 rounded-sm shadow-sm mt-4 mb-4 opacity-90" />
+
           {/* 민원 내용 */}
           <div>
             <h2 className="text-xl font-semibold text-slate-800 mb-2">
@@ -86,7 +91,7 @@ export default function HistoryDetailPage() {
             </div>
           </div>
 
-          {/* 답변 내용 */}
+          {/* 저장된 답변 */}
           <div>
             <h2 className="text-xl font-semibold text-slate-800 mb-2">
               저장된 답변
@@ -97,19 +102,21 @@ export default function HistoryDetailPage() {
                   <p className="whitespace-pre-line">
                     <span className="font-semibold text-slate-800">
                       {mainSectionCounter++}.{' '}
-                    </span>{' '}
+                    </span>
                     {complaint.reply_content.header || (
                       <span className="text-slate-500">'없음'</span>
                     )}
                   </p>
+
                   <p className="whitespace-pre-line mt-2">
                     <span className="font-semibold text-slate-800">
                       {mainSectionCounter++}.{' '}
-                    </span>{' '}
+                    </span>
                     {complaint.reply_content.summary || (
                       <span className="text-slate-500">'없음'</span>
                     )}
                   </p>
+
                   {Array.isArray(complaint.reply_content.body) &&
                   complaint.reply_content.body.length > 0 ? (
                     complaint.reply_content.body.map((bodyItem, bodyIndex) => {
@@ -158,14 +165,17 @@ export default function HistoryDetailPage() {
                       {complaint.reply_content?.body ? (
                         String(complaint.reply_content.body)
                       ) : (
-                        <span className="text-slate-500">'본문이 없습니다.'</span>
+                        <span className="text-slate-500">
+                          '본문이 없습니다.'
+                        </span>
                       )}
                     </p>
                   )}
+
                   <p className="whitespace-pre-line mt-2">
                     <span className="font-semibold text-slate-800">
                       {mainSectionCounter++}.{' '}
-                    </span>{' '}
+                    </span>
                     {complaint.reply_content.footer || (
                       <span className="text-slate-500">'없음'</span>
                     )}

@@ -113,7 +113,7 @@ export default function HistoryList({
                 aria-label={`선택: ${item.title}`}
               />
 
-              <span className="w-16 text-center text-sm">{idx + 1}</span>
+              <span className="w-16 text-center font-semibold">{idx + 1}</span>
 
               <button
                 type="button"
@@ -130,7 +130,7 @@ export default function HistoryList({
               </div>
 
               {/* 날짜 */}
-              <span className="w-32 text-center text-sm">
+              <span className="w-32 text-center">
                 {item.created_at?.slice(0, 10) ?? '-'}
               </span>
             </div>

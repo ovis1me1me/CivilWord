@@ -10,7 +10,7 @@ export default function HistoryHeader({ keyword, setKeyword }: HistoryHeaderProp
       <div
         data-state="Inactive"
         data-type="Outline"
-        className="w-full h-10 bg-white rounded outline outline-offset-[-1px] outline-zinc-400 flex items-center"
+        className="w-full h-10 bg-white rounded outline outline-1 outline-offset-[-1px] outline-zinc-400 flex items-center"
       >
         {/* Leading Icon */}
         <div className="pl-3 pr-2 flex items-center justify-center">
@@ -26,7 +26,7 @@ export default function HistoryHeader({ keyword, setKeyword }: HistoryHeaderProp
         <input
           type="text"
           placeholder="Search"
-          className="flex-1 bg-transparent text-stone-600 text-base leading-normal outline-none border-none placeholder:text-stone-400"
+          className="flex-1 bg-transparent text-stone-600 text-base leading-normal outline-none border-none placeholder:text-stone-400 focus:outline-none focus:ring-0"
           value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
         />

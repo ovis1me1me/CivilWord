@@ -25,6 +25,10 @@
   text-align: center;
 }
 
+.find-id-title a {
+  color: black;
+}
+
 .find-id-form,
 .find-id-result {
   width: 100%;

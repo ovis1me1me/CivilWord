@@ -1,7 +1,7 @@
 .sidebar {
   width: 250px;
   background-color: #f8f8f8;
-  background: linear-gradient(180deg, #081b31 0%, #0a2747 60%, #0f3560 100%);
+  background: linear-gradient(180deg, #0a2747 0%, #18497f 60%, #1f5b9a 100%);
   height: 100vh;
   padding: 20px;
   box-shadow: 2px 0 16px rgba(0,0,0,0.12);
@@ -53,7 +53,6 @@
   align-items: center;
   gap: 12px;
   font-size: 16px;
-  padding: 8px 10px;
   border-radius: 10px;
   border: 1px solid transparent; /* ✅ 기본값도 border 있어야 움직이지 않음 */
   transition: background-color 0.2s, color 0.2s, border-color .2s;
@@ -64,6 +63,7 @@
   background: rgba(255,255,255,0.08);
   color: #ffffff;
   border-color: rgba(255,255,255,0.12); /* 혹시 hover에서 border 생길 경우 대비 */
+  padding: 0px 10px;
 }
 
 /* 현재 라우트 활성 상태(선택) 표시용: a.active 등 라우터에서 붙이기만 하면 됨 */
@@ -82,7 +82,6 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px 10px;
   border-radius: 10px;
   border: 1px solid transparent; /* ✅ 기본값도 border 있어야 움직이지 않음 */
   transition: background-color .2s, color .2s, border-color .2s;
@@ -92,6 +91,7 @@
   background: rgba(255,255,255,0.08);
   color: #ffffff;
   border-color: rgba(255,255,255,0.12);
+  padding: 8px 10px;
 }
 
 .sidebar img {

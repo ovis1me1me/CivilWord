@@ -13,8 +13,6 @@ import {
   fetchSimilarHistories,
 } from '../utils/api';
 
-// (디자인) 첫 번째 파일에서 가져온 컴포넌트
-import PageHeader from '../component/Common/PageHeader';
 import ContentCenter from '../component/Common/ContentCenter';
 import { FileText } from 'lucide-react';
 
@@ -22,7 +20,6 @@ export default function ComplaintDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  // (로직) 두 번째 파일에서 가져온 모든 state
   const [complaint, setComplaint] = useState<ComplaintDetail | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -38,13 +35,11 @@ export default function ComplaintDetailPage() {
     { summaryTitle: '', answerOptions: [''] },
   ]);
 
-  // (로직) 두 번째 파일에서 가져온 헬퍼 함수
   const makeLongSummary = (short: string) => {
     if (!short) return '';
     return `${short}\n\n[상세요약(임시)]: ${short}`;
   };
 
-  // (로직) 두 번째 파일에서 가져온 데이터 로딩 useEffect
   useEffect(() => {
     const fetchData = async () => {
       if (!id) return;
@@ -90,14 +85,12 @@ export default function ComplaintDetailPage() {
     fetchData();
   }, [id]);
 
-  // (로직) 두 번째 파일에서 가져온 높이 조절 useEffect
   useEffect(() => {
     if (answerContainerRef.current) {
       setAnswerHeight(answerContainerRef.current.offsetHeight);
     }
   }, [answerBlocks]);
 
-  // (로직) 두 번째 파일에서 가져온 모든 핸들러 함수
   const handleSummaryChange = (index: number, value: string) => {
     setAnswerBlocks(prev =>
       prev.map((block, i) =>
@@ -125,18 +118,30 @@ export default function ComplaintDetailPage() {
 
   const handleDeleteAnswerOption = (summaryIndex: number, answerIndex: number) => {
     setAnswerBlocks(prev => {
-      const newBlocks = prev.map((block, i) => {
+      const next = prev.map((block, i) => {
         if (i !== summaryIndex) return block;
-        const updatedOptions = block.answerOptions.filter((_, idx) => idx !== answerIndex);
-        return { ...block, answerOptions: updatedOptions };
+        const updated = block.answerOptions.filter((_, idx) => idx !== answerIndex);
+        return { ...block, answerOptions: updated };
       });
 
-      const filteredBlocks = newBlocks.filter(
-        (block) =>
-          !(block.answerOptions.length === 0 && block.summaryTitle.trim() === '')
-      );
+      const target = next[summaryIndex];
 
-      return filteredBlocks.length === 0 ? [{ summaryTitle: '', answerOptions: [''] }] : filteredBlocks;
+      if (target && target.answerOptions.length === 0) {
+        if (next.length === 1) {
+          next[0] = { ...next[0], answerOptions: [''] };
+          return next;
+        }
+
+        if ((target.summaryTitle ?? '').trim() === '') {
+          next.splice(summaryIndex, 1);
+          return next;
+        }
+
+        next[summaryIndex] = { ...target, answerOptions: [''] };
+        return next;
+      }
+
+      return next;
     });
   };
 
@@ -162,12 +167,19 @@ export default function ComplaintDetailPage() {
   const handleGenerateAnswer = async () => {
     if (!id) return;
 
-    const hasAtLeastOneFilled = answerBlocks.some(
-      (block) => block.summaryTitle.trim() !== ''
+    // 제목 / 내용 각각 검사
+    const hasEmptyTitle = answerBlocks.some(block => block.summaryTitle.trim() === '');
+    const hasEmptyContent = answerBlocks.some(
+      block => block.answerOptions.every(opt => opt.trim() === '')
     );
 
-    if (!hasAtLeastOneFilled) {
-      alert('최소 하나 이상의 답변 요지를 입력해야 합니다.');
+    if (hasEmptyTitle) {
+      alert('요지 제목을 입력해주세요.');
+      return;
+    }
+
+    if (hasEmptyContent) {
+      alert('요지 내용을 입력해주세요.');
       return;
     }
 
@@ -175,37 +187,29 @@ export default function ComplaintDetailPage() {
 
     try {
       const numericId = parseInt(id, 10);
-      const labels = ['•'];
+      const bullet = '•';
+
       const payload = {
-        answer_summary: answerBlocks
-          .map((block) => {
-            const filledOptions = block.answerOptions.filter(
-              (opt) => opt.trim() !== ''
-            );
-            if (block.summaryTitle.trim() === '' || filledOptions.length === 0) {
-              return null;
-            }
-            return {
-              index: block.summaryTitle,
-              section: filledOptions.map((opt, index) => ({
-                title: labels[index] || '',
-                text: opt,
-              })),
-            };
-          })
-          .filter(
-            (item): item is { index: string; section: { title: string; text: string }[] } => item !== null
-          ),
+        answer_summary: answerBlocks.map(block => ({
+          index: block.summaryTitle.trim(),
+          section: block.answerOptions
+            .filter(opt => opt.trim() !== '')
+            .map(opt => ({
+              title: bullet,
+              text: opt,
+            })),
+        })),
       };
 
       console.log('보내는 payload:', JSON.stringify(payload, null, 2));
-      await saveReplySummary(numericId, payload);
 
+      await saveReplySummary(numericId, payload);
       const replyResponse = await generateReply(numericId, payload);
+
       console.log('생성된 답변:', replyResponse.data);
 
       navigate(`/complaints/${id}/select-answer`, {
-        state: { summaries: answerBlocks.map((block) => block.summaryTitle) },
+        state: { summaries: payload.answer_summary.map(s => s.index) },
       });
     } catch (error) {
       console.error('답변 요지 저장 실패:', error);
@@ -214,6 +218,8 @@ export default function ComplaintDetailPage() {
       setIsGenerating(false);
     }
   };
+
+
 
   const handleSelectFromSimilar = (payload: { summaryTitle: string; answerOptions: string[] }) => {
     const { summaryTitle, answerOptions } = payload;
@@ -238,32 +244,34 @@ export default function ComplaintDetailPage() {
     return <Spinner />;
   }
 
-  // (디자인) 첫 번째 파일에서 가져온 '목록으로' 버튼
   const backButton = (
     <button
       onClick={() => navigate('/complaints')}
-      className="bg-white text-blue-900 font-semibold px-4 py-2 rounded-lg text-sm hover:bg-gray-200 transition-colors"
+      className="bg-gradient-to-r from-gov-950 via-gov-800 to-gov-700 hover:opacity-90 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-colors"
     >
       목록으로
     </button>
   );
 
-  // (디자인) 첫 번째 파일에서 가져온 JSX (return 문)
   return (
-    <div className="bg-gray-50 min-h-screen pb-12">
-      <PageHeader
-        title={complaint.title}
-        icon={<FileText size={30} className="text-white drop-shadow-md" />}
-        hasSidebar={true}
-        maxWidthClass="max-w-[1000px]"
-        rightContent={backButton}
-      />
+    <div className="min-h-screen pb-12">
 
-      <ContentCenter
-        hasSidebar={true}
-        maxWidthClass="max-w-[1000px]"
-      >
+      <ContentCenter hasSidebar={true} maxWidthClass="max-w-[1000px]">
         <div className="bg-white p-6 rounded-lg shadow-[0_0_15px_rgba(0,0,0,0.1)] w-full space-y-6 relative mt-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <FileText size={26} className="text-gov-800" />
+              <h1 className="text-xl md:text-2xl font-semibold text-blue-950">
+                {complaint.title}
+              </h1>
+            </div>
+            {backButton}
+          </div>
+
+          {/* 구분선 */}
+          <div className="border-b-4 border-gov-800 rounded-sm shadow-sm mt-4 mb-4 opacity-90" />
+
+          {/* 본문 컨텐츠 */}
           <ContentBox label="민원 내용" content={complaint.content} />
           <ContentBox label="민원 요지" content={complaint.summary} />
 
@@ -302,8 +310,8 @@ export default function ComplaintDetailPage() {
               disabled={isGenerating}
               className={`w-1/5 flex justify-center gap-2 px-6 py-2 rounded-lg font-semibold ${
                 isGenerating
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-black text-white hover:bg-zinc-600 transition'
+                  ? 'bg-blue-900 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-gov-950 via-gov-800 to-gov-700 hover:opacity-90 text-white transition'
               }`}
             >
               {isGenerating ? '답변 생성 중' : '답변 생성'}

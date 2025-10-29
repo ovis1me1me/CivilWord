@@ -28,6 +28,10 @@
   text-align: center;
 }
 
+.register-title a {
+  color: black;
+}
+
 .register-form {
   width: 100%;
   display: flex;

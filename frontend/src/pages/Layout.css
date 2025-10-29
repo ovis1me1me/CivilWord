@@ -1,6 +1,6 @@
 .main-layout {
   display:flex; 
-  background: linear-gradient(180deg,#f2f6fb 0%, #ffffff 40%, #ffffff 100%);
+  background: #f2f6fb;
 }
 
 .main-content {

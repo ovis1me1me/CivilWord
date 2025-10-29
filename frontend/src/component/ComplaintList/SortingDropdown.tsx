@@ -9,7 +9,7 @@ export default function SortingDropdown({ sortOption, setSortOption }: Props) {
       <select
         value={sortOption}
         onChange={(e) => setSortOption(e.target.value as '기본' | '날짜 오름' | '날짜 내림')}
-        className="w-full bg-white border border-zinc-400 rounded-lg pl-4 pr-4 py-1 text-base font-medium appearance-none hover:shadow-md focus:outline-none focus:ring-2 focus:ring-sky-300 transition"
+        className="w-full bg-white border border-zinc-400 rounded-lg pl-4 pr-8 py-1 text-base font-medium appearance-none hover:shadow-md focus:outline-none focus:ring-2 focus:ring-sky-300 transition"
       >
         <option value="기본">기본 목록 순</option>
         <option value="날짜 오름">날짜 오름차순</option>

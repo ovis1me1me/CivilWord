@@ -48,7 +48,7 @@ export default function FileUploader({ onUploadSuccess }: Props) {
   const isDefault = fileName === DEFAULT_TEXT;
 
   return (
-    <div className="flex items-center justify-between w-full h-10 bg-white rounded shadow-sm mt-4">
+    <div className="flex items-center justify-between w-full h-10 bg-white rounded shadow-sm">
       
       <span
         className={`flex-1 text-base ml-5 truncate ${

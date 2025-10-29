@@ -30,7 +30,7 @@ const FindId = () => {
 
   return (
     <div className="find-id-container">
-      <h2 className="find-id-title">Civil Word</h2>
+      <h2 className="find-id-title"><a href="/Login">Civil Word</a></h2>
 
       {userId ? (
         <div className="find-id-result">

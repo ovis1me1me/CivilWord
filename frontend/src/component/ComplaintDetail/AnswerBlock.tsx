@@ -47,12 +47,10 @@ export default function AnswerBlock({
 
   return (
     <div className="space-y-4 mb-6">
-      {/* ✅ text-slate-800 */}
       <div className="text-xl font-semibold text-slate-800 mb-2">
         <span>답변 요지{index > 0 ? `_${index + 1}` : ''}</span>
       </div>
 
-      {/* ✅ (수정) bg-slate-50, border-slate-200 */}
       <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-2">
         <div className="mb-1">
           <textarea
@@ -69,20 +67,18 @@ export default function AnswerBlock({
 
         {answerOptions.map((option, i) => (
           <div key={i} className="flex items-start gap-2">
-            {/* ✅ (수정) bg-slate-800, border-slate-800 (기존 black과 유사하지만 세련됨) */}
             <button
               onClick={onAddAnswer}
-              className="w-6 h-6 flex items-center mt-1 text-white justify-center bg-slate-800 hover:text-green-500 hover:bg-white rounded-full flex-shrink-0 border border-slate-800 transition"
+              className="w-6 h-6 flex items-center mt-1 text-white justify-center bg-gov-800 hover:text-green-500 hover:bg-white rounded-full flex-shrink-0 border border-slate-800 transition"
               type="button"
               title="요지 추가"
             >
               <Plus className="w-5 h-5" />
             </button>
 
-            {/* ✅ (수정) bg-slate-800, border-slate-800 */}
             <button
               onClick={() => onDeleteAnswer(i)}
-              className="w-6 h-6 flex items-center mt-1 text-white justify-center bg-slate-800 hover:text-red-500 hover:bg-white rounded-full flex-shrink-0 border border-slate-800 transition"
+              className="w-6 h-6 flex items-center mt-1 text-white justify-center bg-gov-800 hover:text-red-500 hover:bg-white rounded-full flex-shrink-0 border border-slate-800 transition"
               type="button"
               title="요지 삭제"
             >
@@ -107,10 +103,9 @@ export default function AnswerBlock({
       </div>
 
       <div className="flex justify-center mt-4">
-        {/* ✅ (수정) bg-slate-800, hover:bg-slate-900 (기존 black/gray 대신) */}
         <button
           onClick={onAddSummary}
-          className="w-2/5 flex justify-center gap-1 px-4 py-1.5 bg-slate-800 text-white text-sm font-semibold rounded-full hover:bg-slate-900 transition"
+          className="w-2/5 flex justify-center gap-1 px-4 py-1.5 bg-gov-800 text-white text-sm font-semibold rounded-full hover:bg-slate-900 transition"
         >
           <Plus className="w-5 h-5" /> 요지 추가하기
         </button>

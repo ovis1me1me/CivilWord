@@ -8,6 +8,16 @@ interface Props {
   onClickTitle: () => void;
 }
 
+// ✅ YYYY-MM-DD 포맷터
+const formatYYYYMMDD = (input: string | Date) => {
+  const d = new Date(input);
+  if (isNaN(d.getTime())) return '-';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
 export default function ComplaintRow({
   idx,
   complaint,
@@ -15,11 +25,7 @@ export default function ComplaintRow({
   onToggleSelect,
   onClickTitle,
 }: Props) {
-  const formattedDate = new Intl.DateTimeFormat('ko-KR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date(complaint.created_at));
+  const formattedDate = formatYYYYMMDD(complaint.created_at);
 
   return (
     <div
@@ -32,8 +38,7 @@ export default function ComplaintRow({
         type="checkbox"
         checked={isSelected}
         onChange={onToggleSelect}
-        // ✅ 스타일 통일: (mr-2 w-4 h-4) -> (w-5 h-5 mx-2)
-        className="accent-sky-500 w-5 h-5 mx-2 flex-shrink-0"
+        className="accent-sky-500 mr-2 w-5 h-5 flex-shrink-0"
       />
 
       {/* 2. 번호 */}
@@ -43,7 +48,7 @@ export default function ComplaintRow({
 
       {/* 3. 민원 제목 */}
       <div
-        className="flex-1 text-black text-base text-left px-4 hover:underline hover:underline-offset-2 cursor-pointer truncate"
+        className="flex-1 text-black text-base text-left px-2 hover:underline hover:underline-offset-2 cursor-pointer truncate"
         onClick={onClickTitle}
         title={complaint.title}
       >
@@ -51,12 +56,12 @@ export default function ComplaintRow({
       </div>
 
       {/* 4. 답변 상태 */}
-      <div className="w-32 text-center text-black text-base">
+      <div className="w-32 text-center text-black text-base pl-4">
         {complaint.reply_status}
       </div>
 
-      {/* 5. 날짜 */}
-      <div className="w-32 text-center text-black text-base">
+      {/* 5. 날짜 (YYYY-MM-DD) */}
+      <div className="w-32 text-center text-black text-base pl-4">
         {formattedDate}
       </div>
     </div>
