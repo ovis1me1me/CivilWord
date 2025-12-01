@@ -27,6 +27,73 @@ except ImportError:
 
 router = APIRouter()
 
+def format_reply_content(content: dict) -> str:
+    """
+    reply.content / history.reply_content 를
+    엑셀용 단일 문자열로 변환하는 공통 함수
+    구조:
+      1. header
+      2. summary
+      3. index (본문 항목들)
+         - title 있으면: "가. 내용"
+         - title 없으면: "• 내용"
+      N. footer
+    """
+    if not isinstance(content, dict):
+        return str(content)
+
+    lines = []
+    idx = 1
+
+    # 1) header
+    header = (content.get("header") or "").strip()
+    if header:
+        lines.append(f"{idx}. {header}")
+        idx += 1
+
+    # 2) summary
+    summary = (content.get("summary") or "").strip()
+    if summary:
+        lines.append(f"{idx}. {summary}")
+        idx += 1
+
+    # 3) body
+    body = content.get("body", [])
+    # body 가 dict 로 들어오는 예외 방지
+    if isinstance(body, dict):
+        body = [body]
+
+    for item in body:
+        if not isinstance(item, dict):
+            continue
+
+        index = (item.get("index") or "").strip()
+        if index:
+            lines.append(f"{idx}. {index}")
+            idx += 1
+
+        for section in item.get("section", []):
+            if not isinstance(section, dict):
+                continue
+
+            title = (section.get("title") or "").strip()
+            text = (section.get("text") or "").strip()
+
+            # title + text 둘 다 있으면: "가. 내용"
+            if title and text:
+                lines.append(f"{title} {text}")
+            # title 없이 text만 있으면: "• 내용"
+            elif text:
+                lines.append(f"• {text}")
+            # 둘 다 없으면 출력 X
+
+    # 4) footer
+    footer = (content.get("footer") or "").strip()
+    if footer:
+        lines.append(f"{idx}. {footer}")
+
+    return "\n".join(lines)
+
 
 # 0. 히스토리 엑셀 다운로드 라우터
 @router.get("/history/download-excel")
@@ -50,15 +117,31 @@ def download_complaint_history_excel(
 
     rows = []
     for history in histories:
-        # reply_content는 JSONB → 문자열로 정리
-        reply_text = ""
-        if history.reply_content:
-            if isinstance(history.reply_content, dict):
-                reply_text = "\n".join([f"{k}: {v}" for k, v in history.reply_content.items()])
+        rows = []
+    for history in histories:
+        # reply_content는 JSONB → 표준 포맷으로 변환
+        reply_text = "(답변 없음)"
+
+        raw = history.reply_content
+        if raw:
+            parsed = None
+
+            # 1) 이미 dict 인 경우
+            if isinstance(raw, dict):
+                parsed = raw
             else:
-                reply_text = str(history.reply_content)
-        else:
-            reply_text = "(답변 없음)"
+                # 2) JSON 문자열인 경우 파싱 시도
+                try:
+                    parsed = json.loads(raw)
+                except Exception:
+                    parsed = None
+
+            if parsed is not None:
+                # 표준 포맷팅 (header/summary/body/footer)
+                reply_text = format_reply_content(parsed)
+            else:
+                # 어떻게든 안 되면 raw 그대로 문자열화
+                reply_text = str(raw)
 
         rows.append({
             "제목": history.title,
