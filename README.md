@@ -97,6 +97,7 @@ source venv/bin/activate</code></pre>
   sudo -i -u postgres
   psql
   DROP DATABASE IF EXISTS civildb;
+  CREATE USER civiluser WITH PASSWORD '116423';
   CREATE DATABASE civildb OWNER civiluser;
   \q
   exit
