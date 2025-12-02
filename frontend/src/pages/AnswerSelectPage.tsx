@@ -63,6 +63,11 @@ const REPLY_STATUS = {
   COMPLETED: '답변완료',
 } as const;
 
+const makeLongSummary = (short: string) => {
+    if (!short) return '';
+    return `${short}\n\n[상세요약(임시)]: ${short}`;
+  };
+
 // --- Component ---
 export default function AnswerSelectPage() {
   const { id } = useParams<{ id: string }>();
@@ -152,11 +157,13 @@ export default function AnswerSelectPage() {
         fetchSimilarHistories(Number(id)),
       ]);
 
-      const actualComplaintSummary =
-        complaintSummaryRes.data.summary || '민원 요약 없음';
-      setComplaintTitle(complaintSummaryRes.data.title || '제목 없음');
-      setComplaintContent(complaintSummaryRes.data.content || '내용 없음');
-      setComplaintSummary(actualComplaintSummary);
+      const shortSummary: string = complaintSummaryRes.data.summary || '민원 요약 없음';
+      const longSummaryApi: string | undefined = complaintSummaryRes.data.long_summary;
+      const longSummary: string = longSummaryApi ?? makeLongSummary(shortSummary);
+
+      setComplaintTitle(complaintSummaryRes.data.title || '제목 없음');
+      setComplaintContent(complaintSummaryRes.data.content || '내용 없음');
+      setComplaintSummary(longSummary);
 
       const rawSummary = replySummaryRes.data.summary || '[]';
       try {
