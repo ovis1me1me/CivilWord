@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 
-def wrap_body_to_json_string(core_text):
+def wrap_body_to_json_string(core_text, summary: str):
     """
     프론트가 기대하는 형식:
     body: '[{"index": "...", "section": [{"title": "...", "text": "..."}]}]'
@@ -52,10 +52,10 @@ def wrap_body_to_json_string(core_text):
         text = str(core_text)
         body_blocks = [
             {
-                "index": "",  # 필요하면 "답변 내용" 같은 고정 문구 넣어도 됨
+                "index": f"'{summary}'에 관한 답변입니다.",
                 "section": [
                     {
-                        "title": "",  # "가" 같은 타이틀 넣고 싶으면 여기
+                        "title": "",
                         "text": text,
                     }
                 ],
@@ -64,7 +64,6 @@ def wrap_body_to_json_string(core_text):
 
     # 프론트가 JSON.parse 할 수 있도록 문자열로 반환
     return json.dumps(body_blocks, ensure_ascii=False)
-
 
 router = APIRouter()
 
@@ -159,47 +158,83 @@ async def upload_complaints_excel(
 # [complaint]의 민원 관련 내용 및 [reply]의 답변 내용 엑셀로 추출
 # ✅ 답변 내용을 포맷팅하는 함수
 def format_reply_content(content: dict) -> str:
+    # content가 dict가 아닐 수도 있으니 한 번 방어
     if not isinstance(content, dict):
-        return str(content)
+        try:
+            content = json.loads(content)
+        except Exception:
+            return str(content)
 
     lines = []
     idx = 1
 
-    header = content.get("header", "").strip()
+    header = (content.get("header") or "").strip()
     if header:
         lines.append(f"{idx}. {header}")
         idx += 1
 
-    summary = content.get("summary", "").strip()
+    summary = (content.get("summary") or "").strip()
     if summary:
         lines.append(f"{idx}. {summary}")
         idx += 1
 
     body = content.get("body", [])
+
+    # 🔹 body가 JSON 문자열인 경우 → 파싱
+    if isinstance(body, str):
+        try:
+            body = json.loads(body)
+        except Exception:
+            # 파싱 실패하면 그냥 한 덩어리 텍스트로 처리
+            body = [
+                {
+                    "index": "",
+                    "section": [
+                        {"title": "", "text": body}
+                    ],
+                }
+            ]
+
+    # 🔹 body가 dict 하나인 경우 → 리스트로 감싸기
+    if isinstance(body, dict):
+        body = [body]
+
+    # 이제부터는 무조건 list로 가정
     for item in body:
-        index = item.get("index", "").strip()
+        if not isinstance(item, dict):
+            # 혹시 또 이상한 타입이면 문자열로만 처리
+            lines.append(str(item))
+            continue
+
+        index = (item.get("index") or "").strip()
         if index:
             lines.append(f"{idx}. {index}")
             idx += 1
-        for section in item.get("section", []):
+
+        sections = item.get("section") or []
+        # section이 dict 하나인 경우
+        if isinstance(sections, dict):
+            sections = [sections]
+
+        for section in sections:
+            if not isinstance(section, dict):
+                lines.append(f"• {str(section)}")
+                continue
+
             title = (section.get("title") or "").strip()
             text = (section.get("text") or "").strip()
 
-            # title 있고 text 있으면: "가. 내용"
             if title and text:
                 lines.append(f"{title} {text}")
-            # title 없고 text만 있으면: "• 내용"
             elif text:
                 lines.append(f"• {text}")
-            # 둘 다 없으면 출력 안 함
 
-    footer = content.get("footer", "").strip()
+    footer = (content.get("footer") or "").strip()
     if footer:
         lines.append(f"\n{idx}. {footer}")
 
     return "\n".join(lines)
-
-
+    
 # ✅ 엑셀 다운로드 라우터
 @router.get("/complaints/download-excel")
 def download_complaints_excel(
@@ -372,7 +407,7 @@ def generate_reply(
         core_body = run_general(complaint.content, complaint.summary)
 
     # ③ 프론트 기대 형식(JSON 문자열)로 변환
-    body_json_str = wrap_body_to_json_string(core_body)
+    body_json_str = wrap_body_to_json_string(core_body, complaint.summary)
 
     # ④ 표준 reply.content 구조로 재조립
     reply_content = {
@@ -431,7 +466,7 @@ def generate_reply_again(
         core_body = run_general(complaint.content, complaint.summary)
 
     # ③ 프론트 기대 형식(JSON 문자열)로 변환
-    body_json_str = wrap_body_to_json_string(core_body)
+    body_json_str = wrap_body_to_json_string(core_body, complaint.summary)
 
     # ④ 표준 reply.content 구조로 재조립
     reply_content = {
