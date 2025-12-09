@@ -2,11 +2,9 @@ import axios, { InternalAxiosRequestConfig } from "axios";
 
 /** ✅ Axios 인스턴스 생성 */
 const instance = axios.create({
-<<<<<<< Updated upstream
-  baseURL: 'http://172.24.26.125:8123/', // 👉 실제 백엔드 주소로 맞춰줘!
-=======
-  baseURL: '/api', // 👉 실제 백엔드 주소로 맞춰줘!
->>>>>>> Stashed changes
+
+  baseURL: 'http://99.11.38.66:3200/api', // 👉 실제 백엔드 주소로 맞춰줘!
+
   withCredentials: true, // 👉 세션 쿠키 인증 필요시 true
   headers: {
     'Content-Type': 'application/json',

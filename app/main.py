@@ -19,7 +19,7 @@ from app.routers import (
 )
 app = FastAPI()
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend" / "dist"
-app.mount("/assets",StaticFiles(directory=FRONTEND_DIR / "assets"), name="assets")
+app.mount("/",StaticFiles(directory=FRONTEND_DIR, html=True), name="static")
 # LLM용 Pydantic 모델 정의
 class Complaint(BaseModel):
     content: str
