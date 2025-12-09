@@ -1,17 +1,25 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from app.database import engine, Base
-from app.routers import complaint_history, complaint, user_info, login, register, user_history,user
-from app.services.llm_service import generate_answer, InputSchema
-from pydantic import BaseModel
 from fastapi.exceptions import RequestValidationError
-from fastapi import Request
-from fastapi.responses import JSONResponse
-
-
-
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+from pathlib import Path
+from app.database import engine, Base
+from app.auth import get_current_user
+from app.services.llm_service import generate_answer, InputSchema
+from app.routers import (
+    complaint_history,
+    complaint,
+    user_info,
+    login,
+    register,
+    user_history,
+    user,
+)
 app = FastAPI()
-
+FRONTEND_DIR = Path(__file__).parent.parent / "frontend" / "dist"
+app.mount("/assets",StaticFiles(directory=FRONTEND_DIR / "assets"), name="assets")
 # LLM용 Pydantic 모델 정의
 class Complaint(BaseModel):
     content: str
@@ -20,10 +28,7 @@ class Complaint(BaseModel):
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://127.0.0.1:5173",
-        "http://localhost:5173",
-        "http://10.3.129.19:5173",  # 이거 꼭 추가
-        "http://172.24.26.125:5173",  # 이거 꼭 추가
+        "*",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -34,13 +39,14 @@ app.add_middleware(
 Base.metadata.create_all(bind=engine)
 
 # 라우터 등록
-app.include_router(complaint_history.router)
-app.include_router(complaint.router)
-app.include_router(user_info.router)
-app.include_router(login.router)
-app.include_router(register.router)
-app.include_router(user_history.router)
-app.include_router(user.router)
+API_PREFIX = "/api"
+app.include_router(complaint_history.router, prefix=API_PREFIX)
+app.include_router(complaint.router, prefix=API_PREFIX)
+app.include_router(user_info.router, prefix=API_PREFIX)
+app.include_router(login.router, prefix=API_PREFIX)
+app.include_router(register.router, prefix=API_PREFIX)
+app.include_router(user_history.router, prefix=API_PREFIX)
+app.include_router(user.router, prefix=API_PREFIX)
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -53,7 +59,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 
 # 루트 엔드포인트
-@app.get("/")
+@app.get(f"{API_PREFIX}/me")
 def root():
     return {"message": "DB 및 백엔드 정상 작동 중.."}
 
@@ -61,12 +67,12 @@ def root():
 from fastapi import Depends
 from app.auth import get_current_user
 
-@app.get("/me")
+@app.post(f"{API_PREFIX}/generate_answer")
 def get_me(current_user: dict = Depends(get_current_user)):
     return {"user_uid": current_user["sub"]}
 
 # LLM 답변 생성 API 등록
-@app.post("/generate_answer")
+@app.post(f"{API_PREFIX}/generate_answer")
 def handle_complaint(complaint: Complaint):
     response = generate_answer(InputSchema(content=complaint.content))
     return {"answer": response}

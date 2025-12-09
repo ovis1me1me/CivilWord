@@ -21,8 +21,8 @@ DB_CFG = {
     "host": "127.0.0.1",
     "port": 5432,
     "dbname": "civildb",
-    "user": "civilword",
-    "password": "1234",
+    "user": "civiluser",
+    "password": "116423",
 }
 
 # 임베딩 모델 (필요 시 교체: "Qwen/Qwen3-Embedding-4B-bf16")
@@ -146,7 +146,6 @@ def make_fact_card(row: dict):
 # 스키마 생성(없으면)
 # =========================
 DDL_SCHEMA = f"""
-CREATE EXTENSION IF NOT EXISTS vector;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 CREATE TABLE IF NOT EXISTS permit (
@@ -182,7 +181,7 @@ CREATE TABLE IF NOT EXISTS rag_chunk (
   permit_id BIGINT REFERENCES permit(id) ON DELETE CASCADE,
   content TEXT NOT NULL,
   meta JSONB,
-  embedding VECTOR({EMB_DIM})
+  embedding JSONB NOT NULL
 );
 
 -- 인덱스(존재하면 재생성 스킵)
@@ -192,7 +191,7 @@ BEGIN
         SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
         WHERE c.relname = 'rag_chunk_vec_idx'
     ) THEN
-        EXECUTE 'CREATE INDEX rag_chunk_vec_idx ON rag_chunk USING ivfflat (embedding vector_cosine_ops) WITH (lists=100)';
+        EXECUTE 'CREATE INDEX rag_chunk_vec_idx ON permit USING GIN(site_location gin_trgm_ops)';
     END IF;
 
     IF NOT EXISTS (
@@ -298,13 +297,14 @@ def upsert(conn, row: dict):
         # 5) 사실 카드 + 임베딩 + rag_chunk 인서트 (여긴 위치 파라미터 %s 사용 유지)
         content, meta = make_fact_card(row)
         vec = encode_texts([content], is_query=False)[0].tolist()
-
+        json_meta = json.dumps(meta, ensure_ascii=False)
+        json_vec= json.dumps(meta, ensure_ascii=False)
         cur.execute(
             """
             INSERT INTO rag_chunk (permit_id, content, meta, embedding)
             VALUES (%s, %s, %s, %s)
             """,
-            (pid, content, Json(meta, dumps=lambda o: json.dumps(o, ensure_ascii=False)), vec),
+            (pid,content,json_meta, json_vec),
         )
 
 
