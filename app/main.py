@@ -20,9 +20,9 @@ class Complaint(BaseModel):
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://127.0.0.1:5173",
-        "http://localhost:5173",
-        "http://10.3.129.19:5173",  # 이거 꼭 추가
+        "http://127.0.0.1:3200",
+        "http://localhost:3200",
+        "http://10.3.129.206:3200",  # 이거 꼭 추가
     ],
     allow_credentials=True,
     allow_methods=["*"],
