@@ -21,7 +21,7 @@ from sqlalchemy import text
 import re
 # from bllossom8b_infer.inference import generate_llm_reply  # 함수 임포트
 # from blossom_summarizer.summarizer import summarize_with_blossom
-from llm.infer import route_domain, run_building_permit, run_traffic, run_general, summarize
+from llm.infer import summarize, generate_reply as generate_llm_reply
 from typing import Any
 from sqlalchemy.orm import Session
 from app.schemas.complaint import ReplySummaryRequest
@@ -336,7 +336,7 @@ def delete_complaint(
     return ResponseMessage(message=f"민원 {id}번과 관련된 답변 및 요약이 모두 삭제되었습니다.")
 
 # 6. 답변 생성(LLM) 라우터 
-# [complaint]의 reply_summary를 input하여 [reply] 데이터 생성
+# [complaint]의 content를 input하여 LLM 답변 생성
 @router.post("/complaints/{id}/generate-reply", response_model=ReplyBase)
 def generate_reply(
     id: int,
@@ -346,43 +346,40 @@ def generate_reply(
     complaint = db.query(Complaint).filter(
         Complaint.id == id,
         Complaint.user_uid == current_user.user_uid
-    ).first()
+    ).first() 
     if not complaint:
         raise HTTPException(404, "민원이 없습니다.")
 
-    # 요약이 없으면 생성 (Kanana)
+    # 요약 없으면 생성 (Kanana)
+    updated = False
     if not complaint.summary:
         complaint.summary = summarize(complaint.content, mode="short")
+        updated = True
     if not complaint.long_summary:
         complaint.long_summary = summarize(complaint.content, mode="long")
-    db.commit()
+        updated = True
+    if updated:
+        db.commit()
+        db.refresh(complaint)
 
-    # ① 도메인 분류
-    dom = route_domain(
-        content=complaint.content,
-        summary=complaint.summary
+    # ✅ 도메인 분리 / RAG 없이 LLM 단일 호출
+    core_body = generate_llm_reply(
+        complaint.content,
+        complaint.reply_summary
     )
 
-    # ② 도메인별 RAG 답변 생성
-    if dom == "BUILDING_PERMIT":
-        core_body = run_building_permit(complaint.content, complaint.summary)
-    elif dom == "TRAFFIC_ORDINANCE":
-        core_body = run_traffic(complaint.content, complaint.summary)
-    else:
-        core_body = run_general(complaint.content, complaint.summary)
-
-    # ③ 프론트 기대 형식(JSON 문자열)로 변환
+    # ✅ 프론트 기대 형식(JSON 문자열)로 변환
     body_json_str = wrap_body_to_json_string(core_body)
 
-    # ④ 표준 reply.content 구조로 재조립
+    # ✅ 표준 reply.content 구조로 재조립
     reply_content = {
         "header": "평소 구정에 관심을 가져주셔서 감사합니다.",
         "summary": f"귀하의 민원은 '{complaint.summary}'에 관한 것으로 이해됩니다.",
-        "body": body_json_str,  # 🔴 JSON 문자열
+        "body": body_json_str,  # JSON 문자열
         "footer": "추가 문의는 담당 부서로 연락 바랍니다.",
     }
 
-    # ④ DB 저장
+    # ✅ DB 저장
     reply = Reply(
         complaint_id=id,
         content=reply_content,
@@ -394,8 +391,9 @@ def generate_reply(
 
     return reply
 
+
 # 7. 답변 재생산(LLM) 라우터 
-# 기존 [reply]데이터 삭제 후, [complaint]의 reply_summary를 input하여 [reply] 데이터 생성
+# 기존 [reply] 데이터 삭제 후, LLM으로 다시 생성
 @router.post("/complaints/{id}/generate-reply-again", response_model=ReplyBase)
 def generate_reply_again(
     id: int, 
@@ -413,45 +411,49 @@ def generate_reply_again(
     db.query(Reply).filter(Reply.complaint_id == id).delete()
     db.commit()
 
-    # reply_summary 사용 여부 결정
-    use_reply_summary = bool(complaint.reply_summary)
+    # 요약 없으면 생성
+    updated = False
+    if not complaint.summary:
+        complaint.summary = summarize(complaint.content, mode="short")
+        updated = True
+    if not complaint.long_summary:
+        complaint.long_summary = summarize(complaint.content, mode="long")
+        updated = True
+    if updated:
+        db.commit()
+        db.refresh(complaint)
 
-    # 도메인 분류
-    dom = route_domain(
-        content=complaint.content,
-        summary=complaint.summary or summarize(complaint.content, mode="short")
+    # ✅ 도메인 분리 / RAG 없이 LLM 단일 호출
+    core_body = generate_llm_reply(
+        complaint.content,
+        complaint.reply_summary
     )
 
-    # ② 도메인별 RAG 답변 생성
-    if dom == "BUILDING_PERMIT":
-        core_body = run_building_permit(complaint.content, complaint.summary)
-    elif dom == "TRAFFIC_ORDINANCE":
-        core_body = run_traffic(complaint.content, complaint.summary)
-    else:
-        core_body = run_general(complaint.content, complaint.summary)
-
-    # ③ 프론트 기대 형식(JSON 문자열)로 변환
+    # ✅ 프론트 기대 형식(JSON 문자열)로 변환
     body_json_str = wrap_body_to_json_string(core_body)
 
-    # ④ 표준 reply.content 구조로 재조립
+    # ✅ 표준 reply.content 구조로 재조립
     reply_content = {
         "header": "평소 구정에 관심을 가져주셔서 감사합니다.",
         "summary": f"귀하의 민원은 '{complaint.summary}'에 관한 것으로 이해됩니다.",
-        "body": body_json_str,  # 🔴 JSON 문자열
+        "body": body_json_str,  # JSON 문자열
         "footer": "추가 문의는 담당 부서로 연락 바랍니다.",
     }
+
     reply = Reply(
         complaint_id=id,
         content=reply_content,
         user_uid=current_user.user_uid
     )
 
+    # 상태 플래그는 기존 로직 유지
     complaint.reply_status = "수정중"
     db.add(reply)
     db.commit()
     db.refresh(reply)
 
     return reply
+
 
 
 # 8. 응답 수정(컴플레인 아이디로 )

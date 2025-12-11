@@ -21,8 +21,8 @@ DB_CFG = {
     "host": "127.0.0.1",
     "port": 5432,
     "dbname": "civildb",
-    "user": "civilword",
-    "password": "1234",
+    "user": "civiluser",
+    "password": "116423",
 }
 
 # 임베딩 모델 (필요 시 교체: "Qwen/Qwen3-Embedding-4B-bf16")

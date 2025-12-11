@@ -96,6 +96,7 @@ def make_fact_card(row: dict):
 # =========================
 DDL_SCHEMA = f"""
 -- 확장 기능 활성화 (공통)
+CREATE EXTENSION IF NOT EXISTS vector;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 -- 교통 조례 원본 테이블 (고유 이름 사용)
@@ -123,12 +124,15 @@ CREATE TABLE IF NOT EXISTS rag_chunk_traffic (
     ordinance_id BIGINT REFERENCES traffic_ordinance(id) ON DELETE CASCADE,
     content TEXT NOT NULL,
     meta JSONB,
-    embedding vector(1024) NOT NULL
+    embedding VECTOR({EMB_DIM})
 );
 
 -- ✨ [변경] 교통 조례 전용 인덱스 생성
 DO $$
 BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_class c WHERE c.relname = 'rag_chunk_traffic_vec_idx') THEN
+        CREATE INDEX rag_chunk_traffic_vec_idx ON rag_chunk_traffic USING ivfflat (embedding vector_cosine_ops) WITH (lists=100);
+    END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_class c WHERE c.relname = 'rag_chunk_traffic_trgm_idx') THEN
         CREATE INDEX rag_chunk_traffic_trgm_idx ON rag_chunk_traffic USING GIN (content gin_trgm_ops);
     END IF;
