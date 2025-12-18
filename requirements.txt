@@ -61,3 +61,4 @@ peft==0.15.2
 python-multipart
 xlsxwriter==3.2.0
 requests
+bitsandbytes

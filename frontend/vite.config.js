@@ -7,4 +7,8 @@ export default defineConfig({
   css: {
     postcss: './postcss.config.js',
   },
+  server: {
+    port: 3200,
+    host: true, // 네트워크 접속 허용하려면 true나 '0.0.0.0' 넣기
+  },
 })

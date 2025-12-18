@@ -2,7 +2,7 @@ import axios, { InternalAxiosRequestConfig } from "axios";
 
 /** ✅ Axios 인스턴스 생성 */
 const instance = axios.create({
-  baseURL: 'http://127.0.0.1:8000/', // 👉 실제 백엔드 주소로 맞춰줘!
+  baseURL: 'http://99.11.38.68:8000/', // 👉 실제 백엔드 주소로 맞춰줘!
   withCredentials: true, // 👉 세션 쿠키 인증 필요시 true
   headers: {
     'Content-Type': 'application/json',

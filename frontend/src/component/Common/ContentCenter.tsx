@@ -12,7 +12,7 @@ export default function ContentCenter({
   maxWidthClass = "max-w-[850px]",     // 검색창/리스트 폭 통일
 }: Props) {
   return (
-    <div className={hasSidebar ? "pl-[250px]" : ""}> {/* 사이드바 영역 확보 */}
+    <div className={hasSidebar ? "ml-[250px]" : ""}>
       <div className={`${maxWidthClass} w-full mx-auto px-4`}>
         {children}
       </div>

@@ -119,7 +119,7 @@ function Register() {
   return (
     <div className="register-container">
       <div className="register-box">
-        <h2 className="register-title">Civil Word</h2>
+        <h2 className="register-title"><a href="/Login">Civil Word</a></h2>
         <form onSubmit={handleSubmit} className="register-form">
           <input type="text" name="user_id" placeholder="아이디" value={user.user_id} onChange={handleUserChange} />
           <input type="password" name="password" placeholder="비밀번호" value={user.password} onChange={handleUserChange} />

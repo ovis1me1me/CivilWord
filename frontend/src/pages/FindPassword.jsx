@@ -19,7 +19,7 @@ function FindPassword({ onQuestionFound }) {
 
   return (
     <div className="password-container">
-      <h2 className="password-title">Civil Word</h2>
+      <h2 className="password-title"><a href="/Login">Civil Word</a></h2>
       <input
         type="text"
         placeholder="아이디"

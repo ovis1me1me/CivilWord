@@ -1,8 +1,9 @@
 .main-layout {
-  display: flex;
+  display:flex; 
+  background: #f2f6fb;
 }
 
 .main-content {
   flex-grow: 1;
-  padding: 20px;
+  padding: 0px;
 }

@@ -1,7 +1,6 @@
 import { Complaint } from '../../types/complaint';
 import ComplaintRow from './ComplaintRow';
 
-
 interface Props {
   complaints: Complaint[];
   selectedIds: number[];
@@ -18,19 +17,20 @@ export default function ComplaintList({
   onTitleClick,
 }: Props) {
   return (
-    <div className="mt-4 ml-[250px]"> {/* 사이드 바 고려하여 중앙 위치*/}
-      {/* Header */}
+    <div className="w-full">
       <div className="flex items-center bg-gray-100 p-2 rounded-lg mb-2">
         <input
           type="checkbox"
           onChange={toggleSelectAll}
           checked={selectedIds.length === complaints.length && complaints.length > 0}
-          className="accent-sky-500 mr-3 w-4 h-4" // w-4 h-4 추가
+          className="w-5 h-5 mx-2 accent-sky-500"
+          aria-label="현재 표시된 항목 전체선택"
         />
-        <span className="flex-1 font-semibold">번호</span>
-        <span className="flex-1 font-semibold">민원 제목</span>
-        <span className="w-24 text-center font-semibold">답변 상태</span>
-        <span className="w-24 text-center font-semibold">날짜</span>
+        {/* 컬럼 너비 및 정렬 (HistoryList와 동일하게 유지) */}
+        <span className="w-16 text-center font-semibold">번호</span>
+        <span className="flex-1 text-center font-semibold">민원 제목</span>
+        <span className="w-32 text-center font-semibold">답변 상태</span>
+        <span className="w-32 text-center font-semibold">날짜</span>
       </div>
 
       {complaints.map((c, idx) => (

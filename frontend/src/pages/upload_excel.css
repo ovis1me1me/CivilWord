@@ -3,8 +3,9 @@
   position: absolute;
   top: 0;
   left: 250px;
-  width: calc(100vw - 250px);
-  height: 100vh;
+  right: 0;
+  /* ✅ height를 min-height로 변경하여 내용이 길어지면 스크롤이 가능하게 함 */
+  min-height: 100vh; 
   display: flex;
   justify-content: center;
   align-items: center;
@@ -17,11 +18,12 @@
 .excel-container {
   width: 100%;
   max-width: 960px;
-  max-height: 90vh;
+  /* ✅ max-height: 90vh; 제거 -> 높이가 내용에 따라 유동적으로 변함 */
   padding: 40px;
   box-sizing: border-box;
-  background-color: white;
-  border-radius: 0;
+  background-color: rgb(255, 255, 255);
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(10,39,71,.10);
 }
 
 /* 타이틀 */
@@ -29,7 +31,7 @@
   font-size: 23px;
   text-align: center;
   margin-bottom: 24px;
-  color: #444;
+  color: #0a2747;
 }
 
 /* 예시 링크 */
@@ -50,14 +52,21 @@
 
 /* 업로드 박스 */
 .upload-box {
-  background-color: #f8f8f8;
-  border-radius: 8px;
+  background-color: #eff1f4;
+  border-radius: 12px;
   padding: 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
   cursor: pointer;
+  border: 1px solid #e5eef9;
+}
+
+/* 드롭존 강조 스타일(기존 유지 + 보강) */
+.upload-box.dragging {
+  border-color:#1f5fae; 
+  background-color:#eef6ff;
 }
 
 .upload-label {
@@ -90,23 +99,25 @@
   font-size: 1rem;
   font-weight: 600;
   border: none;
-  border-radius: 6px;
-  background-color: black;
+  border-radius: 12px;
+  background: linear-gradient(90deg,#174a86 0%, #1f5fae 60%, #387dcc 100%);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: background-color 0.3s ease;
+  box-shadow: 0 8px 22px rgba(56,125,204,.28);
+  transition: filter .2s ease;
 }
 
 .generate-button:hover {
-  background-color: #6f6f6f;
+  filter: brightness(1.15);
 }
 
 .generate-button.disabled {
-  background-color: #9ca3af;
+  background: linear-gradient(90deg,#9fb7d6 0%, #a9c4e3 60%, #bcd6f1 100%);
   cursor: not-allowed;
+  box-shadow:none;
 }
 
 /* 아이콘 */
@@ -166,19 +177,52 @@ input, textarea, select, button {
   cursor: pointer;
 }
 .tab-btn.active {
-  background: #111;
+  background: #0a2747;
   color: #fff;
-  border-color: #111;
+  border-color: #0a2747;
 }
 
-/* 싱글 입력 폼 */
-.single-form {
-  background: #f8f8f8;
-  border-radius: 8px;
-  padding: 20px;
+.single-form.upload-box {
+  display: block;  /* .upload-box의 display:flex 덮어쓰기 */
+  cursor: auto;    /* .upload-box의 cursor:pointer 덮어쓰기 */
+  gap: 0;
 }
-.field { margin-bottom: 16px; }
-.label { display: block; font-weight: 600; margin-bottom: 8px; color: #333; }
+
+/* ✅ .single-form의 자식 요소 스타일 (기존과 거의 동일) */
+.single-form .field { margin-bottom: 16px; }
+.single-form .field:last-of-type { margin-bottom: 0; } /* 마지막 필드 마진 제거 */
+.single-form .label { display: block; font-weight: 600; margin-bottom: 8px; color: #333; }
+
+.single-form .label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.single-form .public-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+  font-weight: 500;
+  color: #333;
+}
+
+.single-form .input,
+.single-form .textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  outline: none;
+  background-color: #fff; /* ✅ 회색 배경(#eff1f4) 안의 입력창은 흰색으로 */
+}
+
+.single-form .input:focus,
+.single-form .textarea:focus {
+  border-color: #111;
+}
 
 /* 제목 라벨 행 (라벨 왼쪽, 공개 체크박스 오른쪽) */
 .label-row {
@@ -209,12 +253,5 @@ input, textarea, select, button {
   border-color: #111;
 }
 
-/* 드롭존 강조 스타일(기존 유지 + 보강) */
-.upload-box {
-  border: 1.5px #d1d5db;
-}
-.upload-box.dragging {
-  border-color: #111;
-  background-color: #f3f4f6;
-}
+
 

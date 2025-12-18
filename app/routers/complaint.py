@@ -19,8 +19,9 @@ from fastapi.responses import StreamingResponse
 import pandas as pd
 from sqlalchemy import text
 import re
-from bllossom8b_infer.inference import generate_llm_reply  # 함수 임포트
-from blossom_summarizer.summarizer import summarize_with_blossom
+# from bllossom8b_infer.inference import generate_llm_reply  # 함수 임포트
+# from blossom_summarizer.summarizer import summarize_with_blossom
+from llm.infer import summarize, generate_reply as generate_llm_reply
 from typing import Any
 from sqlalchemy.orm import Session
 from app.schemas.complaint import ReplySummaryRequest
@@ -35,6 +36,35 @@ from fastapi import Query
 import logging
 logger = logging.getLogger(__name__)  
 logging.basicConfig(level=logging.INFO)
+
+
+def wrap_body_to_json_string(core_text):
+    """
+    프론트가 기대하는 형식:
+    body: '[{"index": "...", "section": [{"title": "...", "text": "..."}]}]'
+    로 맞추기 위한 래퍼.
+    """
+    # 이미 리스트/딕셔너리 구조면 그대로 사용
+    if isinstance(core_text, (list, dict)):
+        body_blocks = core_text
+    else:
+        # 그냥 문자열이면 하나의 섹션으로 감싸기
+        text = str(core_text)
+        body_blocks = [
+            {
+                "index": "",  # 필요하면 "답변 내용" 같은 고정 문구 넣어도 됨
+                "section": [
+                    {
+                        "title": "",  # "가" 같은 타이틀 넣고 싶으면 여기
+                        "text": text,
+                    }
+                ],
+            }
+        ]
+
+    # 프론트가 JSON.parse 할 수 있도록 문자열로 반환
+    return json.dumps(body_blocks, ensure_ascii=False)
+
 
 router = APIRouter()
 
@@ -152,9 +182,16 @@ def format_reply_content(content: dict) -> str:
             lines.append(f"{idx}. {index}")
             idx += 1
         for section in item.get("section", []):
-            title = section.get("title", "").strip()
-            text = section.get("text", "").strip()
-            lines.append(f"{title}. {text}")
+            title = (section.get("title") or "").strip()
+            text = (section.get("text") or "").strip()
+
+            # title 있고 text 있으면: "가. 내용"
+            if title and text:
+                lines.append(f"{title} {text}")
+            # title 없고 text만 있으면: "• 내용"
+            elif text:
+                lines.append(f"• {text}")
+            # 둘 다 없으면 출력 안 함
 
     footer = content.get("footer", "").strip()
     if footer:
@@ -299,134 +336,125 @@ def delete_complaint(
     return ResponseMessage(message=f"민원 {id}번과 관련된 답변 및 요약이 모두 삭제되었습니다.")
 
 # 6. 답변 생성(LLM) 라우터 
-# [complaint]의 reply_summary를 input하여 [reply] 데이터 생성
+# [complaint]의 content를 input하여 LLM 답변 생성
 @router.post("/complaints/{id}/generate-reply", response_model=ReplyBase)
 def generate_reply(
     id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # 민원 유효성 및 권한 확인
     complaint = db.query(Complaint).filter(
         Complaint.id == id,
         Complaint.user_uid == current_user.user_uid
-    ).first()
+    ).first() 
     if not complaint:
-        raise HTTPException(status_code=404, detail="해당 민원을 찾을 수 없거나 권한이 없습니다.")
+        raise HTTPException(404, "민원이 없습니다.")
 
-    # 중복 답변 방지
-    existing_reply = db.query(Reply).filter(Reply.complaint_id == id).first()
-    if existing_reply:
-        raise HTTPException(status_code=400, detail="이미 해당 민원에 대한 답변이 존재합니다.")
+    # 요약 없으면 생성 (Kanana)
+    updated = False
+    if not complaint.summary:
+        complaint.summary = summarize(complaint.content, mode="short")
+        updated = True
+    if not complaint.long_summary:
+        complaint.long_summary = summarize(complaint.content, mode="long")
+        updated = True
+    if updated:
+        db.commit()
+        db.refresh(complaint)
 
-    # 담당자 정보 조회
-    user_info = db.query(UserInfo).filter(UserInfo.user_uid == current_user.user_uid).first()
-    if not user_info:
-        raise HTTPException(status_code=400, detail="담당자 정보가 등록되어 있지 않습니다.")
-
-    if not (user_info.department and user_info.name and user_info.contact):
-        raise HTTPException(status_code=400, detail="담당자 정보(부서, 이름, 연락처)가 누락되었습니다.")
-
-    # === 답변 조립 ===
-    fixed_header = (
-    " 평소 구정에 관심을 가져주신데 대해 감사드립니다.\n")
-
-    fixed_summary = (
-        f" 귀하께서 요청하신 민원은 \"{complaint.summary}\"에 관한 것으로 이해됩니다.\n"
+    # ✅ 도메인 분리 / RAG 없이 LLM 단일 호출
+    core_body = generate_llm_reply(
+        complaint.content,
+        complaint.reply_summary
     )
 
-    # 📌 여기에서 LLM 호출
-    generated_core = generate_llm_reply(complaint.reply_summary)
-    # generated_core = [{"index": "가로등 고장으로 통행 불편 및 안전 위험에 관하여 아래와 같이 답변드립니다.", "section": [{"title": "가", "text": "귀하께서 신고하신 가로등 수리 작업은 조속한 시일 내 완료될 예정입니다."}]}]
+    # ✅ 프론트 기대 형식(JSON 문자열)로 변환
+    body_json_str = wrap_body_to_json_string(core_body)
 
-    fixed_footer = (
-        f" 기타 궁금하신 사항은 {user_info.department}({user_info.name}, "
-        f"{user_info.contact})로 문의하여 주시면 성심껏 답변드리겠습니다. 감사합니다."
-    )
-
+    # ✅ 표준 reply.content 구조로 재조립
     reply_content = {
-        "header": fixed_header,
-        "summary": fixed_summary,
-        "body": generated_core,
-        "footer": fixed_footer
+        "header": "평소 구정에 관심을 가져주셔서 감사합니다.",
+        "summary": f"귀하의 민원은 '{complaint.summary}'에 관한 것으로 이해됩니다.",
+        "body": body_json_str,  # JSON 문자열
+        "footer": "추가 문의는 담당 부서로 연락 바랍니다.",
     }
 
-
-    # DB 저장
+    # ✅ DB 저장
     reply = Reply(
         complaint_id=id,
         content=reply_content,
         user_uid=current_user.user_uid
     )
     db.add(reply)
-    complaint.reply_status = "수정중"
     db.commit()
     db.refresh(reply)
 
     return reply
 
+
 # 7. 답변 재생산(LLM) 라우터 
-# 기존 [reply]데이터 삭제 후, [complaint]의 reply_summary를 input하여 [reply] 데이터 생성
+# 기존 [reply] 데이터 삭제 후, LLM으로 다시 생성
 @router.post("/complaints/{id}/generate-reply-again", response_model=ReplyBase)
 def generate_reply_again(
     id: int, 
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # 민원 소유자 확인
     complaint = db.query(Complaint).filter(
         Complaint.id == id,
         Complaint.user_uid == current_user.user_uid
     ).first()
     if not complaint:
-        raise HTTPException(status_code=404, detail="해당 민원을 찾을 수 없거나 권한이 없습니다.")
+        raise HTTPException(404, "민원이 없습니다.")
 
     # 기존 답변 삭제
-    existing_reply = db.query(Reply).filter(Reply.complaint_id == id).first()
-    if existing_reply:
-        db.delete(existing_reply)
+    db.query(Reply).filter(Reply.complaint_id == id).delete()
+    db.commit()
+
+    # 요약 없으면 생성
+    updated = False
+    if not complaint.summary:
+        complaint.summary = summarize(complaint.content, mode="short")
+        updated = True
+    if not complaint.long_summary:
+        complaint.long_summary = summarize(complaint.content, mode="long")
+        updated = True
+    if updated:
         db.commit()
+        db.refresh(complaint)
 
-    # 담당자 정보 조회
-    user_info = db.query(UserInfo).filter(UserInfo.user_uid == current_user.user_uid).first()
-    if not user_info or not (user_info.department and user_info.name and user_info.contact):
-        raise HTTPException(status_code=400, detail="담당자 정보가 등록되어 있지 않거나 필수 항목이 누락되었습니다.")
+    # ✅ 도메인 분리 / RAG 없이 LLM 단일 호출
+    core_body = generate_llm_reply(
+        complaint.content,
+        complaint.reply_summary
+    )
 
-    # 답변 내용 재조립
-    fixed_header = (
-    " 평소 구정에 관심을 가져주신데 대해 감사드립니다.\n"
-    )
-    fixed_summary = (
-        f" 귀하께서 요청하신 민원은 \"{complaint.summary}\"에 관한 것으로 이해됩니다.\n"
-    )
-    fixed_footer = (
-        f" 기타 궁금하신 사항은 {user_info.department}({user_info.name}, "
-        f"{user_info.contact})로 문의하여 주시면 성심껏 답변드리겠습니다. 감사합니다."
-    )
-    generated_core = generate_llm_reply(complaint.reply_summary)
-    # generated_core = [{"index": "가로등 고장으로 통행 불편 및 안전 위험에 관하여 아래와 같이 답변드립니다.", "section": [{"title": "가", "text": "귀하께서 신고하신 가로등 수리 작업은 조속한 시일 내 완료될 예정입니다."}]}]
+    # ✅ 프론트 기대 형식(JSON 문자열)로 변환
+    body_json_str = wrap_body_to_json_string(core_body)
+
+    # ✅ 표준 reply.content 구조로 재조립
     reply_content = {
-        "header": fixed_header,
-        "summary": fixed_summary,
-        "body": generated_core,
-        "footer": fixed_footer
+        "header": "평소 구정에 관심을 가져주셔서 감사합니다.",
+        "summary": f"귀하의 민원은 '{complaint.summary}'에 관한 것으로 이해됩니다.",
+        "body": body_json_str,  # JSON 문자열
+        "footer": "추가 문의는 담당 부서로 연락 바랍니다.",
     }
 
-    # 새 답변 저장
-    new_reply = Reply(
+    reply = Reply(
         complaint_id=id,
         content=reply_content,
         user_uid=current_user.user_uid
     )
-    db.add(new_reply)
 
-    # 상태 갱신
+    # 상태 플래그는 기존 로직 유지
     complaint.reply_status = "수정중"
-
+    db.add(reply)
     db.commit()
-    db.refresh(new_reply)
+    db.refresh(reply)
 
-    return new_reply
+    return reply
+
+
 
 # 8. 응답 수정(컴플레인 아이디로 )
 # 기록된 [reply]의 content 수정
@@ -514,31 +542,24 @@ def get_complaint_summary(
     if not complaint:
         raise HTTPException(status_code=404, detail="해당 민원이 없거나 권한이 없습니다.")
 
-    # 요약이 없을 때만 생성
+    # Short summary 생성
     if not complaint.summary:
-        complaint_summary = summarize_with_blossom(complaint.content)
-        complaint.summary = complaint_summary
+        complaint.summary = summarize(complaint.content, mode="short")
         db.commit()
         db.refresh(complaint)
-    else:
-        complaint_summary = complaint.summary
 
-    # 긴 요약이 없을 때만 생성
+    # Long summary 생성
     if not complaint.long_summary:
-        complaint_long_summary = summarize_with_blossom(complaint.content)
-        complaint.long_summary = complaint_long_summary
+        complaint.long_summary = summarize(complaint.content, mode="long")
         db.commit()
         db.refresh(complaint)
-    else:
-        complaint_long_summary = complaint.long_summary
 
     return ComplaintSummaryResponse(
         title=complaint.title,
         content=complaint.content,
-        summary=complaint_summary,
-        long_summary=complaint_long_summary
+        summary=complaint.summary,
+        long_summary=complaint.long_summary
     )
-
 
 # 10. 답변 요약 호출 라우터 
 # [complaint] id 기준으로 답변 요약, 제목, 민원 반환

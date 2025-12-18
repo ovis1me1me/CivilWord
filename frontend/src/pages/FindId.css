@@ -1,14 +1,21 @@
 /* FindId.css */
 
 .find-id-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  max-width: 420px;
+  padding: 32px;
+  background-color: #ffffff;
+  font-family: 'Noto Sans KR', sans-serif;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
-  padding: 24px;
-  background-color: #ffffff;
-  font-family: 'Noto Sans KR', sans-serif;
+  box-shadow:0 12px 30px rgba(10,39,71,.10);
+  border-radius:16px;
 }
 
 .find-id-title {
@@ -16,6 +23,10 @@
   font-weight: 700;
   margin-bottom: 30px;
   text-align: center;
+}
+
+.find-id-title a {
+  color: black;
 }
 
 .find-id-form,
@@ -31,25 +42,33 @@
   padding: 14px;
   font-size: 16px;
   border: 1px solid #ccc;
-  border-radius: 8px;
+  border-radius: 12px;
+  transition: border-color .2s, box-shadow .2s;
+}
+
+.find-id-form input:focus { 
+  border-color:#1f5fae; 
+  box-shadow:0 0 0 3px rgba(31,95,174,.15); 
+  outline:none; 
 }
 
 .find-id-form button,
 .find-id-result button {
   padding: 14px;
-  background-color: #000;
+  background: linear-gradient(90deg,#174a86 0%, #1f5fae 60%, #387dcc 100%);
   color: white;
   font-size: 16px;
   font-weight: 600;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: pointer;
   transition: background-color 0.2s ease;
+  box-shadow: 0 6px 18px rgba(56,125,204,.28);
 }
 
 .find-id-form button:hover,
 .find-id-result button:hover {
-  background-color: #333;
+  filter:brightness(1.15);
 }
 
 .find-id-result p {

@@ -1,18 +1,16 @@
 import AnswerBlock from '../ComplaintDetail/AnswerBlock'; // AnswerBlock의 실제 경로로 수정해주세요.
 
-// 부모로부터 받을 데이터와 함수의 타입을 정의합니다.
+// ... (Interface 정의는 변경 없음)
 interface AnswerSection {
   title: string;
   text: string;
 }
-
 interface AnswerSummaryBlock {
   index: string;
   section: AnswerSection[];
 }
-
 interface Props {
-  summary: string; // 민원 요지 (표시용)
+  summary: string;
   answerSummaryBlocks: AnswerSummaryBlock[];
   onReviewChange: (blockIndex: number, value: string) => void;
   onSectionChange: (blockIndex: number, sectionIndex: number, value: string) => void;
@@ -36,8 +34,14 @@ export default function RightPanel({
 }: Props) {
   return (
     <div className="flex-1 flex flex-col bg-white rounded relative">
-      <h3 className="text-xl font-semibold text-black mb-4">민원 요지</h3>
-      <div className="bg-gray-200 p-4 mb-2 rounded-lg h-28 overflow-auto">{summary}</div>
+      {/* ✅ (수정) text-black -> text-slate-800 */}
+      <h3 className="text-xl font-semibold text-slate-800 mb-4">민원 요지</h3>
+      {/* ✅ (수정) bg-gray-200 -> bg-slate-50, border 추가, 텍스트 색상 변경 */}
+      <div className="bg-slate-50 border border-slate-200 p-4 mb-2 rounded-lg h-28 overflow-auto text-slate-700">
+        {summary}
+      </div>
+      
+      {/* AnswerBlock 컴포넌트는 이미 이전 요청에서 slate 테마로 수정되었습니다. */}
       <div className="overflow-auto pr-2 max-h-[300px] mt-2">
         {answerSummaryBlocks.map((block, index) => (
           <AnswerBlock
@@ -53,12 +57,17 @@ export default function RightPanel({
           />
         ))}
       </div>
-       <button
+      
+      {/* ✅ (수정) 버튼 색상을 slate 테마로 변경 */}
+      <button
         onClick={onRegenerate}
         disabled={isGenerating}
-        className={`mt-4 w-full px-4 py-2 text-sm font-semibold rounded-lg hover:bg-zinc-600 ${
-          isGenerating ? 'bg-gray-400' : 'bg-black'
-        } text-white`}
+        className={`mt-4 w-full px-4 py-2 text-sm font-semibold rounded-lg transition
+          ${
+            isGenerating
+              ? 'bg-slate-400 cursor-not-allowed' // Disabled
+              : 'bg-gradient-to-r from-gov-950 via-gov-800 to-gov-700 hover:opacity-90' // Enabled
+          } text-white`}
       >
         {isGenerating ? '재생성 중...' : '답변 재생성'}
       </button>
